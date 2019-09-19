@@ -2,6 +2,7 @@ import os
 import os.path
 from os import path
 import pdb
+import copy
 
 class Node:
     parent = None
@@ -75,14 +76,13 @@ def make_queue(node):
     node_queue = [node]
     return node_queue
 
-def general_search(W, H, landing_pos, max_elevation, n_targets, targets_pos, node_graph, queuing_fn):
+def general_search(W, H, landing_pos, max_elevation, n_targets, goal, node_graph, queuing_fn):
     nodes = make_queue(node_graph[landing_pos])
 
     while True:
-        if not nodes: return [['FAIL']]
+        if not nodes: return ['FAIL']
         node = nodes.pop(0)
-        for goal in targets_pos:
-            if node.pos == goal: return node
+        if node.pos == goal: return node
         node.explored = True
 
         # neighbour
@@ -96,14 +96,20 @@ def general_search(W, H, landing_pos, max_elevation, n_targets, targets_pos, nod
 
 
 def bfs(W, H, landing_pos, max_elevation, n_targets, targets_pos, node_graph):
-    solution = general_search(W, H, landing_pos, max_elevation, n_targets, targets_pos, node_graph, bfs_queuing_fn)
-    #    solution = [['FAIL']]
-    if solution == [['FAIL']]:
-        return solution
-    solution_list = [solution.pos]
-    while solution.parent:
-        solution = solution.parent
-        solution_list.insert(0, solution.pos)
+    solution_list = []
+    for goal in targets_pos:
+        temp_node_graph = copy.deepcopy(node_graph)
+        solution = general_search(W, H, landing_pos, max_elevation, n_targets, goal, temp_node_graph, bfs_queuing_fn)
+        if solution == ['FAIL']:
+            solution_list.insert(len(solution_list),solution)
+        elif solution.pos == landing_pos:
+            solution_list.insert(len(solution_list),[landing_pos, solution.pos])
+        else:
+            solution_path = [solution.pos]
+            while solution.parent:
+                solution = solution.parent
+                solution_path.insert(0, solution.pos)
+            solution_list.insert(len(solution_list),solution_path)
     return solution_list
 
 def ucs(W, H, landing_pos, max_elevation, n_targets, targets_pos, graph):
@@ -136,16 +142,15 @@ graph = [line.split() for line in graph_lines]
 input_f.close()
 
 solution = process_search(algorithm,graph_size,landing_pos,max_elevation,n_targets,targets_pos, graph)
-print(solution)
 
 # output solution in another layer
 
 output_f = open("output.txt", 'w')
 for i in range(0,len(solution)):
-    for j in range(0,len(solution[i])):
-        output_f.write(solution[i][j])
-        if j!=len(solution[i])-1:
-            output_f.write(" ")
+    for j in range(0, len(solution[i])):
+        output_f.write(str(solution[i][j]))
+        print(str(solution[i][j]), end=' ')
+        output_f.write(" ")
     if i!=len(solution)-1:
         output_f.write("\n")
-
+        print()

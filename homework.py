@@ -6,6 +6,7 @@ import copy
 
 class Node:
     parent = None
+    cost = 0
 
     def __init__(self, pos, inclination, explored, edges):
         self.pos = pos
@@ -72,6 +73,14 @@ def bfs_queuing_fn(nodes):
         node_queue.append(node)
     return node_queue
 
+def ucs_queuing_fn(nodes):
+    for node in nodes:
+        if node.cost == 10:
+            node_queue.insert(0,node)
+        else:
+            node_queue.append(node)
+    return node_queue
+
 def make_queue(node):
     node_queue = [node]
     return node_queue
@@ -90,6 +99,17 @@ def general_search(W, H, landing_pos, max_elevation, n_targets, goal, node_graph
         for neighbour_pos in node_graph[node.pos].edges:
             neighbour_node = node_graph[neighbour_pos]
             if not neighbour_node.explored and neighbour_node not in nodes:
+                node_pos_elements = node.pos.split(',')
+                node_pos_x = node_pos_elements[0]
+                node_pos_y = node_pos_elements[1]
+                neighbour_pos_elements = neighbour_node.pos.split(',')
+                neighbour_pos_x = neighbour_pos_elements[0]
+                neighbour_pos_y = neighbour_pos_elements[1]
+                # Compare node_pos and neightbour_pos elements to compute cost
+                if node_pos_x == neighbour_pos_x or node_pos_y == neighbour_pos_y:
+                    neighbour_node.cost = 10
+                else:
+                    neighbour_node.cost = 14
                 neighbour_node.parent = node
                 neighbour_list.append(node_graph[neighbour_pos])
         nodes = queuing_fn(neighbour_list)
@@ -112,10 +132,22 @@ def bfs(W, H, landing_pos, max_elevation, n_targets, targets_pos, node_graph):
             solution_list.insert(len(solution_list),solution_path)
     return solution_list
 
-def ucs(W, H, landing_pos, max_elevation, n_targets, targets_pos, graph):
-    solution = [['0,0','0,1','1,2','2,1','3,0','4,1','4,2']]
-    #    solution = [['0,0','0,1','1,2','2,1','3,0','4,1','4,2']]
-    return solution
+def ucs(W, H, landing_pos, max_elevation, n_targets, targets_pos, node_graph):
+    solution_list = []
+    for goal in targets_pos:
+        temp_node_graph = copy.deepcopy(node_graph)
+        solution = general_search(W, H, landing_pos, max_elevation, n_targets, goal, temp_node_graph, ucs_queuing_fn)
+        if solution == ['FAIL']:
+            solution_list.insert(len(solution_list), solution)
+        elif solution.pos == landing_pos:
+            solution_list.insert(len(solution_list), [landing_pos, solution.pos])
+        else:
+            solution_path = [solution.pos]
+            while solution.parent:
+                solution = solution.parent
+                solution_path.insert(0, solution.pos)
+            solution_list.insert(len(solution_list), solution_path)
+    return solution_list
 
 def astar(W, H, landing_pos, max_elevation, n_targets, targets_pos, graph):
     solution = [['1,0','2,1','3,2','4,3']]

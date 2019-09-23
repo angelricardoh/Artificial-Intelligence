@@ -1,7 +1,5 @@
-import os
 import os.path
 from os import path
-import pdb
 import copy
 
 class Node:
@@ -18,12 +16,10 @@ class Node:
     	return "Node pos: " + self.pos + " inclination: " + str(self.inclination) + \
               " explored: " + str(self.explored) + " edges: " + str(self.edges)
 
-def process_search(algorithm, graph_size, landing_pos, max_elevation, n_targets, targets_pos, graph):
+def process_search(algorithm, W, H, landing_pos, max_elevation, n_targets, targets_pos, graph):
     node_graph = {}
 
     # Convert graph to node_graph and remove invalid edges
-    W = int(graph_size[0])
-    H = int(graph_size[1])
     for x in range(0, W):
         for y in range(0, H):
             pos = str(x) + ',' + str(y)
@@ -56,11 +52,11 @@ def process_search(algorithm, graph_size, landing_pos, max_elevation, n_targets,
     for goal in targets_pos:
         node_graph_copy = copy.deepcopy(node_graph)
         if algorithm == "BFS":
-            solution = general_search(algorithm, goal, node_graph_copy, bfs_queuing_fn)
+            solution = general_search(algorithm, goal, node_graph_copy, bfs_queuing_fn, max_elevation)
         elif algorithm == "UCS":
-            solution = general_search(algorithm, goal, node_graph_copy, ucs_queuing_fn)
+            solution = general_search(algorithm, goal, node_graph_copy, ucs_queuing_fn, max_elevation)
         elif algorithm == "A*":
-            solution = general_search(algorithm, goal, node_graph_copy, ucs_queuing_fn)
+            solution = general_search(algorithm, goal, node_graph_copy, ucs_queuing_fn, max_elevation)
         else:
             solution = ['FAIL']
 
@@ -76,39 +72,40 @@ def process_search(algorithm, graph_size, landing_pos, max_elevation, n_targets,
             solution_list.insert(len(solution_list), solution_path)
     return solution_list
 
-#output test
-# add case inside search solution to return landing_pos = target_pos return [landing_pos, target_pos] (inclusive)
-
 # Queue methods
 
-node_queue = []
+def make_queue(queue, node):
+    queue = [node]
+    return queue
 
-def make_queue(node):
-    node_queue = [node]
-    return node_queue
-
-def bfs_queuing_fn(nodes):
+def bfs_queuing_fn(queue, nodes):
     for node in nodes:
-        node_queue.append(node)
-    return node_queue
+        queue.append(node)
+    return queue
 
-def ucs_queuing_fn(nodes):
-    nodes.sort(key=sortCost)
+def ucs_queuing_fn(queue, nodes):
     for x in nodes:
-        node_queue.append(x)
-    return node_queue
+        queue.append(x)
+    queue.sort(key=sortCost)
+    # print("queuing")
+    # for y in queue:
+    #     print(y.pos)
+    #     print(y.cost)
+    return queue
 
 def sortCost(e):
     return e.cost
 
 # Search methods
 
-def general_search(algorithm, goal, node_graph, queuing_fn):
-    nodes = make_queue(node_graph[landing_pos])
+def general_search(algorithm, goal, node_graph, queuing_fn, max_elevation):
+    queue = []
+    nodes = make_queue(queue, node_graph[landing_pos])
 
     while True:
         if not nodes: return ['FAIL']
         node = nodes.pop(0)
+        #print("pop: " + str(node.pos))
         if node.pos == goal: return node
         node.explored = True
 
@@ -119,10 +116,10 @@ def general_search(algorithm, goal, node_graph, queuing_fn):
                 if algorithm == "UCS":
                     neighbour_node.cost = cost_function(False, node, neighbour_node)
                 elif algorithm == "A*":
-                    neighbour_node.cost = cost_function(True, node, neighbour_node)
+                    neighbour_node.cost = cost_function(True, node, neighbour_node) + heuristic_function(neighbour_node, goal, max_elevation)
                 neighbour_node.parent = node
                 neighbour_list.append(node_graph[neighbour_pos])
-        nodes = queuing_fn(neighbour_list)
+        nodes = queuing_fn(queue, neighbour_list)
 
 def cost_function(astar, node, neighbour_node):
     total_cost = 0
@@ -141,7 +138,7 @@ def cost_function(astar, node, neighbour_node):
         total_cost += abs(node.inclination - neighbour_node.inclination)
     return total_cost
 
-def heuristic_function(neighbour_node, goal):
+def heuristic_function(neighbour_node, goal, max_elevation):
     neighbour_pos_elements = neighbour_node.pos.split(',')
     neighbour_pos_x = int(neighbour_pos_elements[0])
     neighbour_pos_y = int(neighbour_pos_elements[1])
@@ -151,21 +148,21 @@ def heuristic_function(neighbour_node, goal):
     diffX = abs(neighbour_pos_x - goal_pos_x)
     diffY = abs(neighbour_pos_y - goal_pos_y)
     if neighbour_pos_x == goal_pos_x:
-        return diffY
+        return diffY * (max_elevation + 5)
     else:
-        return diffX
+        return diffX * (max_elevation + 5)
     if diffX == diffY:
-        return diffY
+        return diffY * (max_elevation + 5)
     else:
-        return diffX + diffY
+        return (diffX + diffY) * (max_elevation + 5)
 
-
-if path.exists("output.txt"):
-    os.remove("output.txt")
+# Input processing
 
 input_f = open("input.txt", "r")
 algorithm = input_f.readline().rstrip()
 graph_size = input_f.readline().rstrip().split(' ')
+W = int(graph_size[0])
+H = int(graph_size[1])
 landing_pos = input_f.readline().rstrip().replace(' ', ',')
 max_elevation = int(input_f.readline().rstrip())
 n_targets = int(input_f.readline())
@@ -178,9 +175,14 @@ graph_lines = input_f.readlines()
 graph = [line.split() for line in graph_lines]
 input_f.close()
 
-solution = process_search(algorithm,graph_size,landing_pos,max_elevation,n_targets,targets_pos, graph)
+# Search
 
-# output solution in another layer
+solution = process_search(algorithm,W,H,landing_pos,max_elevation,n_targets,targets_pos, graph)
+
+# Output processing
+
+if path.exists("output.txt"):
+    os.remove("output.txt")
 
 output_f = open("output.txt", 'w')
 for i in range(0,len(solution)):

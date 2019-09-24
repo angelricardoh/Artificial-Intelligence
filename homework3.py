@@ -116,7 +116,8 @@ def general_search(algorithm, goal, node_graph, queuing_fn, max_elevation):
                 if algorithm == "UCS":
                     neighbour_node.cost = cost_function(False, node, neighbour_node)
                 elif algorithm == "A*":
-                    neighbour_node.cost = cost_function(True, node, neighbour_node) + heuristic_function(neighbour_node, goal, max_elevation)
+                    neighbour_node.cost = cost_function(True, node, neighbour_node) \
+                                          + heuristic_function(neighbour_node, goal, max_elevation)
                 neighbour_node.parent = node
                 neighbour_list.append(node_graph[neighbour_pos])
         nodes = queuing_fn(queue, neighbour_list)

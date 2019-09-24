@@ -105,7 +105,7 @@ def general_search(algorithm, goal, node_graph, queuing_fn, max_elevation):
     while True:
         if not nodes: return ['FAIL']
         node = nodes.pop(0)
-        #print("pop: " + str(node.pos))
+        # print("pop: " + str(node.pos) + " value:" + str(node.inclination))
         if node.pos == goal: return node
         node.explored = True
 
@@ -148,14 +148,7 @@ def heuristic_function(neighbour_node, goal, max_elevation):
     goal_pos_y = int(goal_pos_elements[1])
     diffX = abs(neighbour_pos_x - goal_pos_x)
     diffY = abs(neighbour_pos_y - goal_pos_y)
-    if neighbour_pos_x == goal_pos_x:
-        return diffY * (max_elevation + 5)
-    else:
-        return diffX * (max_elevation + 5)
-    if diffX == diffY:
-        return diffY * (max_elevation + 5)
-    else:
-        return (diffX + diffY) * (max_elevation + 5)
+    return (diffX + diffY) * (max_elevation + 5)
 
 # Input processing
 
@@ -189,8 +182,11 @@ output_f = open("output.txt", 'w')
 for i in range(0,len(solution)):
     for j in range(0, len(solution[i])):
         output_f.write(str(solution[i][j]))
-        print(str(solution[i][j]), end=' ')
-        output_f.write(" ")
+        end = ''
+        if j != len(solution[i]) - 1:
+            output_f.write(" ")
+            end = ' '
+        print(str(solution[i][j]), end=end)
     if i!=len(solution)-1:
         output_f.write("\n")
         print()

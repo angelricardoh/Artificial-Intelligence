@@ -139,6 +139,8 @@ def cost_function(astar, node, neighbour_node):
         total_cost += abs(node.inclination - neighbour_node.inclination)
     return total_cost
 
+inclination_cost = 4
+
 def heuristic_function(neighbour_node, goal, max_elevation):
     neighbour_pos_elements = neighbour_node.pos.split(',')
     neighbour_pos_x = int(neighbour_pos_elements[0])
@@ -148,7 +150,7 @@ def heuristic_function(neighbour_node, goal, max_elevation):
     goal_pos_y = int(goal_pos_elements[1])
     diffX = abs(neighbour_pos_x - goal_pos_x)
     diffY = abs(neighbour_pos_y - goal_pos_y)
-    return (diffX + diffY) * (max_elevation + 5)
+    return (diffX + diffY) * (max_elevation + inclination_cost + 1)
 
 # Input processing
 

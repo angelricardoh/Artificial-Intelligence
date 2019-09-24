@@ -184,11 +184,11 @@ output_f = open("output.txt", 'w')
 for i in range(0,len(solution)):
     for j in range(0, len(solution[i])):
         output_f.write(str(solution[i][j]))
-        end = ''
+        # end = ''
         if j != len(solution[i]) - 1:
             output_f.write(" ")
-            end = ' '
-        print(str(solution[i][j]), end=end)
+        #     end = ' '
+        # print(str(solution[i][j]), end=end)
     if i!=len(solution)-1:
         output_f.write("\n")
-        print()
+        #print()

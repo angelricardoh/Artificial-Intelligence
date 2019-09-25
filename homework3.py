@@ -117,7 +117,7 @@ def general_search(algorithm, goal, node_graph, queuing_fn, max_elevation):
                     neighbour_node.cost = cost_function(False, node, neighbour_node)
                 elif algorithm == "A*":
                     neighbour_node.cost = cost_function(True, node, neighbour_node) \
-                                          + heuristic_function(neighbour_node, goal, max_elevation)
+                                          + heuristic_function(node, neighbour_node, goal, max_elevation)
                 neighbour_node.parent = node
                 neighbour_list.append(node_graph[neighbour_pos])
         nodes = queuing_fn(queue, neighbour_list)
@@ -141,7 +141,7 @@ def cost_function(astar, node, neighbour_node):
 
 inclination_cost = 4
 
-def heuristic_function(neighbour_node, goal, max_elevation):
+def heuristic_function(node, neighbour_node, goal, max_elevation):
     neighbour_pos_elements = neighbour_node.pos.split(',')
     neighbour_pos_x = int(neighbour_pos_elements[0])
     neighbour_pos_y = int(neighbour_pos_elements[1])
@@ -150,7 +150,13 @@ def heuristic_function(neighbour_node, goal, max_elevation):
     goal_pos_y = int(goal_pos_elements[1])
     diffX = abs(neighbour_pos_x - goal_pos_x)
     diffY = abs(neighbour_pos_y - goal_pos_y)
-    return (diffX + diffY) * (max_elevation + inclination_cost + 1)
+    node_pos_elements = node.pos.split(',')
+    node_pos_x = int(node_pos_elements[0])
+    node_pos_y = int(node_pos_elements[1])
+    if node_pos_x == neighbour_pos_x or node_pos_y == neighbour_pos_y:
+        return (diffX + diffY) * (max_elevation + inclination_cost + 1)
+    else:
+        return (diffX + diffY) * (max_elevation + 1)
 
 # Input processing
 
@@ -184,11 +190,9 @@ output_f = open("output.txt", 'w')
 for i in range(0,len(solution)):
     for j in range(0, len(solution[i])):
         output_f.write(str(solution[i][j]))
-        # end = ''
         if j != len(solution[i]) - 1:
             output_f.write(" ")
-        #     end = ' '
-        # print(str(solution[i][j]), end=end)
+        # print(str(solution[i][j]), end=' ')
     if i!=len(solution)-1:
         output_f.write("\n")
-        #print()
+        # print()

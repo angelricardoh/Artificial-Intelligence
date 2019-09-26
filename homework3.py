@@ -84,13 +84,14 @@ def bfs_queuing_fn(queue, nodes):
     return queue
 
 def ucs_queuing_fn(queue, nodes):
+    nodes.sort(key=sortCost)
     for x in nodes:
         queue.append(x)
-    queue.sort(key=sortCost)
     # print("queuing")
     # for y in queue:
     #     print(y.pos)
     #     print(y.cost)
+
     return queue
 
 def sortCost(e):

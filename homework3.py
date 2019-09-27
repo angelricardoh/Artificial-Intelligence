@@ -62,8 +62,6 @@ def process_search(algorithm, W, H, landing_pos, max_elevation, n_targets, targe
 
         if solution == ['FAIL']:
             solution_list.insert(len(solution_list), solution)
-        elif type(solution) == Node and solution.pos == landing_pos:
-            solution_list.insert(len(solution_list), [landing_pos, solution.pos])
         else:
             solution_path = [solution.pos]
             while solution.parent:

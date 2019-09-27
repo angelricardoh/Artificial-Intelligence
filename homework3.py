@@ -1,6 +1,7 @@
 import os.path
 from os import path
 import copy
+import math
 
 class Node:
     parent = None
@@ -87,10 +88,6 @@ def ucs_queuing_fn(queue, nodes):
     nodes.sort(key=sortCost)
     for x in nodes:
         queue.append(x)
-    # print("queuing")
-    # for y in queue:
-    #     print(y.pos)
-    #     print(y.cost)
 
     return queue
 
@@ -118,10 +115,11 @@ def general_search(algorithm, goal, node_graph, queuing_fn, max_elevation):
                     neighbour_node.cost = cost_function(False, node, neighbour_node)
                 elif algorithm == "A*":
                     neighbour_node.cost = cost_function(True, node, neighbour_node) \
-                                          + heuristic_function(node, neighbour_node, goal, max_elevation)
+                                          + heuristic_function(neighbour_node, goal)
                 neighbour_node.parent = node
                 neighbour_list.append(node_graph[neighbour_pos])
         nodes = queuing_fn(queue, neighbour_list)
+
 
 def cost_function(astar, node, neighbour_node):
     total_cost = 0
@@ -131,7 +129,7 @@ def cost_function(astar, node, neighbour_node):
     neighbour_pos_elements = neighbour_node.pos.split(',')
     neighbour_pos_x = neighbour_pos_elements[0]
     neighbour_pos_y = neighbour_pos_elements[1]
-    # Compare node_pos and neightbour_pos elements to compute cost
+    # Compare node_pos and neighbour_pos elements to compute cost
     if node_pos_x == neighbour_pos_x or node_pos_y == neighbour_pos_y:
         total_cost = 10
     else:
@@ -140,9 +138,8 @@ def cost_function(astar, node, neighbour_node):
         total_cost += abs(node.inclination - neighbour_node.inclination)
     return total_cost
 
-inclination_cost = 4
 
-def heuristic_function(node, neighbour_node, goal, max_elevation):
+def heuristic_function(neighbour_node, goal):
     neighbour_pos_elements = neighbour_node.pos.split(',')
     neighbour_pos_x = int(neighbour_pos_elements[0])
     neighbour_pos_y = int(neighbour_pos_elements[1])
@@ -151,15 +148,10 @@ def heuristic_function(node, neighbour_node, goal, max_elevation):
     goal_pos_y = int(goal_pos_elements[1])
     diffX = abs(neighbour_pos_x - goal_pos_x)
     diffY = abs(neighbour_pos_y - goal_pos_y)
-    node_pos_elements = node.pos.split(',')
-    node_pos_x = int(node_pos_elements[0])
-    node_pos_y = int(node_pos_elements[1])
-    if node_pos_x == neighbour_pos_x or node_pos_y == neighbour_pos_y:
-        return (diffX + diffY) * (max_elevation + inclination_cost + 1)
-    else:
-        return (diffX + diffY) * (max_elevation + 1)
+    return math.sqrt(pow(diffX, 2) + pow(diffY, 2))
 
 # Input processing
+
 
 input_f = open("input.txt", "r")
 algorithm = input_f.readline().rstrip()

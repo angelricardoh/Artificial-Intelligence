@@ -6,9 +6,8 @@ import math
 from timeit import default_timer as timer
 
 # Global variables
-MAX_DEPTH = 3
+MAX_DEPTH = 2
 BOARD_SIZE = 16
-nextActions = []
 
 
 def split(word):
@@ -242,13 +241,14 @@ def min_value_minimax(state, d):
 
 # Alpha-beta
 def alpha_beta_search(state):
-    value = max_value(state, float("-inf"), float("inf"), 0)
-    for action in nextActions:
+    next_actions = []
+    value = max_value(state, float("-inf"), float("inf"), 0, next_actions)
+    for action in next_actions:
         if value == action.utility_value:
             return action
 
 
-def max_value(state, alpha, beta, depth):
+def max_value(state, alpha, beta, depth, next_actions = None):
     if terminal_test(state) or cutoff_test(state, depth):
         return utility(state, MAX_player)
     value = float("-inf")
@@ -258,7 +258,7 @@ def max_value(state, alpha, beta, depth):
         value = max(value, utility_value)
         if depth == 0:
             action.utility_value = utility_value
-            nextActions.append(action)
+            next_actions.append(action)
         if value >= beta:
             return value
         alpha = max(alpha, value)

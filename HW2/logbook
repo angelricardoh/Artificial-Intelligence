@@ -1,3 +1,6 @@
+depth = 3
+all moves
+
 SINGLE
 WHITE
 100.0
@@ -121,10 +124,10 @@ WW...W..........
 ...........BBBBB
 210.48782249400028
 
-
+depth = 3
 only Min moves in min_value and only Max moves in max_value
 always same iteration
-/usr/local/bin/python3.5 /Users/angel/Projects/AI/HW2/homework3.py
+
 SINGLE
 WHITE
 100.0

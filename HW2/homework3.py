@@ -2,11 +2,14 @@ import os.path
 from os import path
 import copy
 from enum import Enum
+import math
 from timeit import default_timer as timer
 
 # Global variables
-MAX_DEPTH = 2
+MAX_DEPTH = 3
 BOARD_SIZE = 16
+nextActions = []
+
 
 def split(word):
     return list(word)
@@ -42,6 +45,8 @@ class ActionType(Enum):
 
 
 class Action():
+    utility_value = 0
+
     def __init__(self, action_type, moves, original_pos):
         self.action_type = action_type
         self.moves = moves
@@ -204,7 +209,7 @@ def printState(s):
 # Minimax
 
 def minimax_decision(state):
-    max_utility = -99999
+    max_utility = float("-inf")
 
     possible_actions = actions(state, MAX_player)
     for action in possible_actions:
@@ -220,7 +225,7 @@ def minimax_decision(state):
 def max_value_minimax(state, d):
     if terminal_test(state) or cutoff_test(state, d):
         return utility(state, MAX_player)
-    value = -99999
+    value = float("-inf")
     for action in actions(state, MAX_player):
         value = max(value, min_value_minimax(result(state, action), d + 1))
     return value
@@ -229,7 +234,7 @@ def max_value_minimax(state, d):
 def min_value_minimax(state, d):
     if terminal_test(state) or cutoff_test(state, d):
         return utility(state, MAX_player)
-    value = 99999
+    value = float("inf")
     for action in actions(state, MIN_player):
         value = min(value, max_value_minimax(result(state, action), d + 1))
     return value
@@ -237,38 +242,41 @@ def min_value_minimax(state, d):
 
 # Alpha-beta
 def alpha_beta_search(state):
-    value = max_value(state, -99999, 99999, 0)
-    for action in actions(state, MAX_player):
-        # print(action.description())
-        utility_value = utility(result(state, action), MAX_player)
-        # print(utility_value)
-        if value == utility_value:
-            print("Matched")
+    value = max_value(state, float("-inf"), float("inf"), 0)
+    for action in nextActions:
+        if value == action.utility_value:
             return action
 
 
 def max_value(state, alpha, beta, depth):
     if terminal_test(state) or cutoff_test(state, depth):
         return utility(state, MAX_player)
-    value = -99999
+    value = float("-inf")
+
     for action in actions(state, MAX_player):
-        value = max(value, min_value(result(state, action), alpha, beta, depth + 1))
+        utility_value = min_value(result(state, action), alpha, beta, depth + 1)
+        value = max(value, utility_value)
+        if depth == 0:
+            action.utility_value = utility_value
+            nextActions.append(action)
         if value >= beta:
             return value
         alpha = max(alpha, value)
     return value
 
 
+
 def min_value(state, alpha, beta, depth):
     if terminal_test(state) or cutoff_test(state, depth):
         return utility(state, MAX_player)
-    value = 99999
+    value = float("inf")
     for action in actions(state, MIN_player):
         value = min(value, max_value(result(state, action), alpha, beta, depth + 1))
         if value <= alpha:
             return value
         beta = min(beta, value)
     return value
+
 
 start = timer()
 input_f = open("input.txt", "r")
@@ -306,12 +314,14 @@ for i in range(0, BOARD_SIZE):
 
 s0 = board_dict.copy()
 printState(s0)
-print("----------------")
-print("Minimax")
-print("----------------")
-action_minimax = minimax_decision(s0)
-s1 = result(s0, action_minimax)
-printState(s1)
+
+# print("----------------")
+# print("Minimax")
+# print("----------------")
+# action_minimax = minimax_decision(s0)
+# s1 = result(s0, action_minimax)
+# printState(s1)
+
 print("----------------")
 print("Alphabeta")
 print("----------------")
@@ -320,7 +330,7 @@ s1 = result(s0, action_alphabeta)
 printState(s1)
 
 end = timer()
-print(end - start)
+print(str(end - start) + " seg")
 
 # Output processing
 

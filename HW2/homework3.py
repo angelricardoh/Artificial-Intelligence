@@ -6,7 +6,7 @@ import math
 from timeit import default_timer as timer
 
 # Global variables
-MAX_DEPTH = 2
+MAX_DEPTH = 4
 BOARD_SIZE = 16
 
 
@@ -148,9 +148,6 @@ def result(s, a):
 
 
 def terminal_test(s):
-    if s == s0:
-        return False
-
     if ((s['0,0'] != 'W' and s['0,1'] != 'W' and s['0,2'] != 'W' and s['0,3'] != 'W' and s['0,4'] != 'W' and
          s['1,0'] != 'W' and s['1,1'] != 'W' and s['1,2'] != 'W' and s['1,3'] != 'W' and s['1,4'] != 'W' and
          s['2,0'] != 'W' and s['2,1'] != 'W' and s['2,2'] != 'W' and s['2,3'] != 'W' and
@@ -245,6 +242,7 @@ def alpha_beta_search(state):
     value = max_value(state, float("-inf"), float("inf"), 0, next_actions)
     for action in next_actions:
         if value == action.utility_value:
+            print("Matched")
             return action
 
 
@@ -312,8 +310,10 @@ for i in range(0, BOARD_SIZE):
         pos = pos = str(i) + ',' + str(j)
         board_dict[pos] = board_graph[j][i]
 
-s0 = board_dict.copy()
-printState(s0)
+MAX_DEPTH = 5
+
+# s0 = board_dict.copy()
+printState(board_dict)
 
 # print("----------------")
 # print("Minimax")
@@ -325,8 +325,8 @@ printState(s0)
 print("----------------")
 print("Alphabeta")
 print("----------------")
-action_alphabeta = alpha_beta_search(s0)
-s1 = result(s0, action_alphabeta)
+action_alphabeta = alpha_beta_search(board_dict)
+s1 = result(board_dict, action_alphabeta)
 printState(s1)
 
 end = timer()

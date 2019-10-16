@@ -6,7 +6,7 @@ import math
 from timeit import default_timer as timer
 
 # Global variables
-MAX_DEPTH = 4
+MAX_DEPTH = 5
 BOARD_SIZE = 16
 
 
@@ -148,18 +148,16 @@ def result(s, a):
 
 
 def terminal_test(s):
-    if ((s['0,0'] != 'W' and s['0,1'] != 'W' and s['0,2'] != 'W' and s['0,3'] != 'W' and s['0,4'] != 'W' and
-         s['1,0'] != 'W' and s['1,1'] != 'W' and s['1,2'] != 'W' and s['1,3'] != 'W' and s['1,4'] != 'W' and
-         s['2,0'] != 'W' and s['2,1'] != 'W' and s['2,2'] != 'W' and s['2,3'] != 'W' and
-         s['3,0'] != 'W' and s['3,1'] != 'W' and s['3,2'] and
-         s['4,0'] != 'W' and s['4,1'] != 'W') or
-            (s['14,11'] != 'B' and s['15,11'] != 'B' and
-             s['13,12'] != 'B' and s['14,12'] != 'B' and s['15,12'] != 'B' and
-             s['12,13'] != 'B' and s['13,13'] != 'B' and s['14,13'] != 'B' and s['15,13'] != 'B' and
-             s['11,14'] != 'B' and s['12,14'] != 'B' and s['13,14'] != 'B' and s['14,14'] != 'B' and s[
-                 '15,14'] != 'B' and
-             s['11,15'] != 'B' and s['12,15'] != 'B' and s['13,15'] != 'B' and s['14,15'] != 'B' and s[
-                 '15,15'] != 'B')):
+    if ((s['0,0'] == 'W' and s['0,1'] == 'W' and s['0,2'] == 'W' and s['0,3'] == 'W' and s['0,4'] == 'W' and
+         s['1,0'] == 'W' and s['1,1'] == 'W' and s['1,2'] == 'W' and s['1,3'] == 'W' and s['1,4'] == 'W' and
+         s['2,0'] == 'W' and s['2,1'] == 'W' and s['2,2'] == 'W' and s['2,3'] == 'W' and
+         s['3,0'] == 'W' and s['3,1'] == 'W' and s['3,2'] and
+         s['4,0'] == 'W' and s['4,1'] == 'W') or
+            (s['14,11'] == 'B' and s['15,11'] == 'B' and
+             s['13,12'] == 'B' and s['14,12'] == 'B' and s['15,12'] == 'B' and
+             s['12,13'] == 'B' and s['13,13'] == 'B' and s['14,13'] == 'B' and s['15,13'] == 'B' and
+             s['11,14'] == 'B' and s['12,14'] == 'B' and s['13,14'] == 'B' and s['14,14'] == 'B' and s['15,14'] == 'B' and
+             s['11,15'] == 'B' and s['12,15'] == 'B' and s['13,15'] == 'B' and s['14,15'] == 'B' and s['15,15'] == 'B')):
         return True
     return False
 
@@ -242,7 +240,6 @@ def alpha_beta_search(state):
     value = max_value(state, float("-inf"), float("inf"), 0, next_actions)
     for action in next_actions:
         if value == action.utility_value:
-            print("Matched")
             return action
 
 
@@ -253,6 +250,7 @@ def max_value(state, alpha, beta, depth, next_actions = None):
 
     for action in actions(state, MAX_player):
         utility_value = min_value(result(state, action), alpha, beta, depth + 1)
+
         value = max(value, utility_value)
         if depth == 0:
             action.utility_value = utility_value
@@ -288,9 +286,9 @@ if MAX_player.color == PlayerColor.WHITE:
 else:
     MIN_player = Player(PlayerColor.WHITE, PlayerType.MIN)
 
-print(game)
-print(color)
-print(time)
+# print(game)
+# print(color)
+# print(time)
 
 # Bidimensional array or dictionary
 board_lines = input_f.readlines()
@@ -310,10 +308,9 @@ for i in range(0, BOARD_SIZE):
         pos = pos = str(i) + ',' + str(j)
         board_dict[pos] = board_graph[j][i]
 
-MAX_DEPTH = 5
+MAX_DEPTH = 3
 
-# s0 = board_dict.copy()
-printState(board_dict)
+# printState(board_dict)
 
 # print("----------------")
 # print("Minimax")
@@ -322,18 +319,17 @@ printState(board_dict)
 # s1 = result(s0, action_minimax)
 # printState(s1)
 
-print("----------------")
-print("Alphabeta")
-print("----------------")
+# print("----------------")
+# print("Alphabeta")
+# print("----------------")
 action_alphabeta = alpha_beta_search(board_dict)
 s1 = result(board_dict, action_alphabeta)
-printState(s1)
+# printState(s1)
 
 end = timer()
 print(str(end - start) + " seg")
 
 # Output processing
-
 
 
 # Tests

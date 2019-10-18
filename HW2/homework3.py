@@ -1,11 +1,12 @@
 import os.path
 from os import path
-import copy
 from enum import Enum
 import math
 from timeit import default_timer as timer
+from typing import List, Any
 
 # Global variables
+
 MAX_DEPTH = 5
 BOARD_SIZE = 16
 
@@ -106,7 +107,7 @@ def actions(s, p):
                                          str(x) + ',' + str(y + 1),
                                          str(x + 1) + ',' + str(y - 1),
                                          str(x + 1) + ',' + str(y),
-                                         str(x + 1) + ',' + str(y + 1)]  # type: Action
+                                         str(x + 1) + ',' + str(y + 1)]  # type: [String]
             possible_jump_pos_array = [str(x - 2) + ',' + str(y - 2),
                                        str(x - 2) + ',' + str(y),
                                        str(x - 2) + ',' + str(y + 2),
@@ -114,7 +115,8 @@ def actions(s, p):
                                        str(x) + ',' + str(y + 2),
                                        str(x + 2) + ',' + str(y - 2),
                                        str(x + 2) + ',' + str(y),
-                                       str(x + 2) + ',' + str(y + 2)]  # type: Action
+                                       str(x + 2) + ',' + str(y + 2)]
+
 
             for i in range(0, len(possible_pieces_pos_array)):
                 possible_piece_pos = possible_pieces_pos_array[i]
@@ -162,35 +164,35 @@ def terminal_test(s):
     return False
 
 
-def cutoff_test(s, d):
+def cutoff_test(d):
     if d == MAX_DEPTH:
         return True
     return False
 
 
-def utility(s, p):
-    pieces_w = [key for (key, value) in s.items() if value == 'W']
-    pieces_b = [key for (key, value) in s.items() if value == 'B']
+def utility(s):
+    if MAX_player.color == PlayerColor.WHITE:
+        total_distance_w = 0
 
-    total_distance_w = 0
-    total_distance_b = 0
-    for piece in pieces_w:
-        piece_pos_elements = piece.split(',')
-        x = int(piece_pos_elements[0])
-        y = int(piece_pos_elements[1])
-    #    total_distance_w += math.sqrt(pow(x, 2) + pow(y, 2))
-        total_distance_w += x + y
-    for piece in pieces_b:
-        piece_pos_elements = piece.split(',')
-        x = int(piece_pos_elements[0])
-        y = int(piece_pos_elements[1])
-    #    total_distance_b += math.sqrt(pow(15 - x, 2) + pow(15 - y, 2))
-        total_distance_b += abs(x - 15) + abs(y - 15)
+        pieces_w = [key for (key, value) in s.items() if value == 'W']
 
-    if p.color == PlayerColor.WHITE:
-        return (1 / total_distance_w)  # - (1 / total_distance_b)
+        for piece in pieces_w:
+            piece_pos_elements = piece.split(',')
+            x = int(piece_pos_elements[0])
+            y = int(piece_pos_elements[1])
+            total_distance_w += math.sqrt(pow(x, 2) + pow(y, 2))
+        return -total_distance_w  # - (1 / total_distance_b)
     else:
-        return (1 / total_distance_b)  # - (1 / total_distance_w)
+        total_distance_b = 0
+
+        pieces_b = [key for (key, value) in s.items() if value == 'B']
+
+        for piece in pieces_b:
+            piece_pos_elements = piece.split(',')
+            x = int(piece_pos_elements[0])
+            y = int(piece_pos_elements[1])
+            total_distance_b += math.sqrt(pow(15 - x, 2) + pow(15 - y, 2))
+        return -total_distance_b  # - (1 / total_distance_w)
 
 
 def printState(s):
@@ -217,8 +219,8 @@ def minimax_decision(state):
 
 
 def max_value_minimax(state, d):
-    if terminal_test(state) or cutoff_test(state, d):
-        return utility(state, MAX_player)
+    if terminal_test(state) or cutoff_test(d):
+        return utility(state)
     value = float("-inf")
     for action in actions(state, MAX_player):
         value = max(value, min_value_minimax(result(state, action), d + 1))
@@ -226,8 +228,8 @@ def max_value_minimax(state, d):
 
 
 def min_value_minimax(state, d):
-    if terminal_test(state) or cutoff_test(state, d):
-        return utility(state, MAX_player)
+    if terminal_test(state) or cutoff_test(d):
+        return utility(state)
     value = float("inf")
     for action in actions(state, MIN_player):
         value = min(value, max_value_minimax(result(state, action), d + 1))
@@ -236,21 +238,26 @@ def min_value_minimax(state, d):
 
 # Alpha-beta
 def alpha_beta_search(state):
-    next_actions = []
+    next_actions = []  # type: List[Action]
+    max_action = None
     value = max_value(state, float("-inf"), float("inf"), 0, next_actions)
     for action in next_actions:
         if value == action.utility_value:
-            return action
+            if max_action:
+                utility(result(state, action)) > utility(result(state, max_action))
+                max_action = action
+            else:
+                max_action = action
+    return max_action
 
 
 def max_value(state, alpha, beta, depth, next_actions = None):
-    if terminal_test(state) or cutoff_test(state, depth):
-        return utility(state, MAX_player)
+    if terminal_test(state) or cutoff_test(depth):
+        return utility(state)
     value = float("-inf")
 
     for action in actions(state, MAX_player):
         utility_value = min_value(result(state, action), alpha, beta, depth + 1)
-
         value = max(value, utility_value)
         if depth == 0:
             action.utility_value = utility_value
@@ -263,8 +270,8 @@ def max_value(state, alpha, beta, depth, next_actions = None):
 
 
 def min_value(state, alpha, beta, depth):
-    if terminal_test(state) or cutoff_test(state, depth):
-        return utility(state, MAX_player)
+    if terminal_test(state) or cutoff_test(depth):
+        return utility(state)
     value = float("inf")
     for action in actions(state, MIN_player):
         value = min(value, max_value(result(state, action), alpha, beta, depth + 1))
@@ -310,21 +317,21 @@ for i in range(0, BOARD_SIZE):
 
 MAX_DEPTH = 3
 
-# printState(board_dict)
+printState(board_dict)
 
 # print("----------------")
 # print("Minimax")
 # print("----------------")
-# action_minimax = minimax_decision(s0)
-# s1 = result(s0, action_minimax)
+# action_minimax = minimax_decision(board_dict)
+# s1 = result(board_dict, action_minimax)
 # printState(s1)
 
-# print("----------------")
-# print("Alphabeta")
-# print("----------------")
+print("----------------")
+print("Alphabeta")
+print("----------------")
 action_alphabeta = alpha_beta_search(board_dict)
 s1 = result(board_dict, action_alphabeta)
-# printState(s1)
+printState(s1)
 
 end = timer()
 print(str(end - start) + " seg")

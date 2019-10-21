@@ -2,13 +2,13 @@ import os.path
 from os import path
 from enum import Enum
 from timeit import default_timer as timer
-from typing import List, Any
 
 # Global variables
 
 MAX_DEPTH = 2
 CURRENT_DEPTH = MAX_DEPTH
 BOARD_SIZE = 16
+SINGLE_GAME = "SINGLE"
 
 def split(word):
     return list(word)
@@ -83,125 +83,136 @@ def actions(s, p):
                 pieces_in_camp.append(piece_location)
 
     # Only available pieces to move while their are in my camp
+    valid_move_incamp = False
     if pieces_in_camp:
-        pieces_dict = pieces_in_camp
-        p.pieces_in_camp = pieces_in_camp
+        for piece_location in pieces_in_camp:
+            piece_pos_elements = piece_location.split(',')
+            x = int(piece_pos_elements[0])
+            y = int(piece_pos_elements[1])
+            if p.color == PlayerColor.BLACK:
+                if s[str(x + 1) + ',' + str(y)] == '.' or s[str(x + 1) + ',' + str(y + 1)] == '.' or s[str(x) + ',' + str(y + 1)] == '.':
+                    valid_move_incamp = True
+            else:
+                if s[str(x - 1) + ',' + str(y)] == '.' or s[str(x - 1) + ',' + str(y - 1)] == '.' or s[str(x) + ',' + str(y - 1)] == '.':
+                    valid_move_incamp = True
+        if valid_move_incamp:
+            pieces_dict = pieces_in_camp
 
+    if game != SINGLE_GAME:
+        # Remove pieces already in corner
+        if p.color == PlayerColor.WHITE:
+            p.heuristic_point = '0,0'
+            if s['0,0'] == 'W':
+                pieces_dict.remove('0,0')
+                p.heuristic_point = '0,1'
+                if s['0,1'] == 'W':
+                    pieces_dict.remove('0,1')
+                    p.heuristic_point = '1,0'
+                    if s['1,0'] == 'W':
+                        pieces_dict.remove('1,0')
+                        p.heuristic_point = '1,1'
+                        if s['1,1'] == 'W':
+                            pieces_dict.remove('1,1')
+                            p.heuristic_point = '0,2'
+                            if s['0,2'] == 'W':
+                                pieces_dict.remove('0,2')
+                                p.heuristic_point = '2,0'
+                                if s['2,0'] == 'W':
+                                    pieces_dict.remove('2,0')
+                                    p.heuristic_point = '2,1'
+                                    if s['2,1'] == 'W':
+                                        pieces_dict.remove('2,1')
+                                        p.heuristic_point = '1,2'
+                                        if s['1,2'] == 'W':
+                                            pieces_dict.remove('1,2')
+                                            p.heuristic_point = '0,3'
+                                            if s['0,3'] == 'W':
+                                                pieces_dict.remove('0,3')
+                                                p.heuristic_point = '3,0'
+                                                if s['3,0'] == 'W':
+                                                    pieces_dict.remove('3,0')
+                                                    p.heuristic_point = '2,2'
+                                                    if s['2,2'] == 'W':
+                                                        pieces_dict.remove('2,2')
+                                                        p.heuristic_point = '3,1'
+                                                        if s['3,1'] == 'W':
+                                                            pieces_dict.remove('3,1')
+                                                            p.heuristic_point = '1,3'
+                                                            if s['1,3'] == 'W':
+                                                                pieces_dict.remove('1,3')
+                                                                p.heuristic_point = '4,0'
+                                                                if s['4,0'] == 'W':
+                                                                    pieces_dict.remove('4,0')
+                                                                    p.heuristic_point = '0,4'
+                                                                    if s['0,4'] == 'W':
+                                                                        pieces_dict.remove('0,4')
+                                                                        p.heuristic_point = '3,2'
+                                                                        if s['3,2'] == 'W':
+                                                                            pieces_dict.remove('3,2')
+                                                                            p.heuristic_point = '2,3'
+                                                                            if s['2,3'] == 'W':
+                                                                                pieces_dict.remove('2,3')
+                                                                                p.heuristic_point = '1,4'
+                                                                                if s['1,4'] == 'W':
+                                                                                    pieces_dict.remove('1,4')
+                                                                                    p.heuristic_point = '4,1'
 
-    # Remove pieces already in corner
-    temp_dict = pieces_dict.copy()
-    if p.color == PlayerColor.WHITE:
-        p.heuristic_point = '0,0'
-        if s['0,0'] == 'W':
-            pieces_dict.remove('0,0')
-            p.heuristic_point = '0,1'
-            if s['0,1'] == 'W':
-                pieces_dict.remove('0,1')
-                p.heuristic_point = '1,0'
-                if s['1,0'] == 'W':
-                    pieces_dict.remove('1,0')
-                    p.heuristic_point = '1,1'
-                    if s['1,1'] == 'W':
-                        pieces_dict.remove('1,1')
-                        p.heuristic_point = '0,2'
-                        if s['0,2'] == 'W':
-                            pieces_dict.remove('0,2')
-                            p.heuristic_point = '2,0'
-                            if s['2,0'] == 'W':
-                                pieces_dict.remove('2,0')
-                                p.heuristic_point = '2,1'
-                                if s['2,1'] == 'W':
-                                    pieces_dict.remove('2,1')
-                                    p.heuristic_point = '1,2'
-                                    if s['1,2'] == 'W':
-                                        pieces_dict.remove('1,2')
-                                        p.heuristic_point = '0,3'
-                                        if s['0,3'] == 'W':
-                                            pieces_dict.remove('0,3')
-                                            p.heuristic_point = '3,0'
-                                            if s['3,0'] == 'W':
-                                                pieces_dict.remove('3,0')
-                                                p.heuristic_point = '2,2'
-                                                if s['2,2'] == 'W':
-                                                    pieces_dict.remove('2,2')
-                                                    p.heuristic_point = '3,1'
-                                                    if s['3,1'] == 'W':
-                                                        pieces_dict.remove('3,1')
-                                                        p.heuristic_point = '1,3'
-                                                        if s['1,3'] == 'W':
-                                                            pieces_dict.remove('1,3')
-                                                            p.heuristic_point = '4,0'
-                                                            if s['4,0'] == 'W':
-                                                                pieces_dict.remove('4,0')
-                                                                p.heuristic_point = '0,4'
-                                                                if s['0,4'] == 'W':
-                                                                    pieces_dict.remove('0,4')
-                                                                    p.heuristic_point = '3,2'
-                                                                    if s['3,2'] == 'W':
-                                                                        pieces_dict.remove('3,2')
-                                                                        p.heuristic_point = '2,3'
-                                                                        if s['2,3'] == 'W':
-                                                                            pieces_dict.remove('2,3')
-                                                                            p.heuristic_point = '1,4'
-                                                                            if s['1,4'] == 'W':
-                                                                                pieces_dict.remove('1,4')
-                                                                                p.heuristic_point = '4,1'
-    else:
-        p.heuristic_point = '15,15'
-        if s['15,15'] == 'B':
-            pieces_dict.remove('15,15')
-            p.heuristic_point = '14,15'
-            if s['14,15'] == 'B':
-                pieces_dict.remove('14,15')
+        else:
+            p.heuristic_point = '15,15'
+            if s['15,15'] == 'B':
+                pieces_dict.remove('15,15')
                 p.heuristic_point = '14,15'
-                if s['15,14'] == 'B':
-                    pieces_dict.remove('15,14')
-                    p.heuristic_point = '14,14'
-                    if s['14,14'] == 'B':
-                        pieces_dict.remove('14,14')
-                        p.heuristic_point = '13,15'
-                        if s['13,15'] == 'B':
-                            pieces_dict.remove('13,15')
-                            p.heuristic_point = '15,13'
-                            if s['15,13'] == 'B':
-                                pieces_dict.remove('15,13')
-                                p.heuristic_point = '13,14'
-                                if s['13,14'] == 'B':
-                                    pieces_dict.remove('13,14')
-                                    p.heuristic_point = '14,13'
-                                    if s['14,13'] == 'B':
-                                        pieces_dict.remove('14,13')
-                                        p.heuristic_point = '12,15'
-                                        if s['12,15'] == 'B':
-                                            pieces_dict.remove('12,15')
-                                            p.heuristic_point = '15,12'
-                                            if s['15,12'] == 'B':
-                                                pieces_dict.remove('15,12')
-                                                p.heuristic_point = '13,13'
-                                                if s['13,13'] == 'B':
-                                                    pieces_dict.remove('13,13')
-                                                    p.heuristic_point = '12,14'
-                                                    if s['12,14'] == 'B':
-                                                        pieces_dict.remove('12,14')
-                                                        p.heuristic_point = '14,12'
-                                                        if s['14,12'] == 'B':
-                                                            pieces_dict.remove('14,12')
-                                                            p.heuristic_point = '11,15'
-                                                            if s['11,15'] == 'B':
-                                                                pieces_dict.remove('11,15')
-                                                                p.heuristic_point = '15,11'
-                                                                if s['15,11'] == 'B':
-                                                                    pieces_dict.remove('15,11')
-                                                                    p.heuristic_point = '12,13'
-                                                                    if s['12,13'] == 'B':
-                                                                        pieces_dict.remove('12,13')
-                                                                        p.heuristic_point = '13,12'
-                                                                        if s['13,12'] == 'B':
-                                                                            pieces_dict.remove('13,12')
-                                                                            p.heuristic_point = '11,14'
-                                                                            if s['11,14'] == 'B':
-                                                                                pieces_dict.remove('11,14')
-                                                                                p.heuristic_point = '14,11'
+                if s['14,15'] == 'B':
+                    pieces_dict.remove('14,15')
+                    p.heuristic_point = '14,15'
+                    if s['15,14'] == 'B':
+                        pieces_dict.remove('15,14')
+                        p.heuristic_point = '14,14'
+                        if s['14,14'] == 'B':
+                            pieces_dict.remove('14,14')
+                            p.heuristic_point = '13,15'
+                            if s['13,15'] == 'B':
+                                pieces_dict.remove('13,15')
+                                p.heuristic_point = '15,13'
+                                if s['15,13'] == 'B':
+                                    pieces_dict.remove('15,13')
+                                    p.heuristic_point = '13,14'
+                                    if s['13,14'] == 'B':
+                                        pieces_dict.remove('13,14')
+                                        p.heuristic_point = '14,13'
+                                        if s['14,13'] == 'B':
+                                            pieces_dict.remove('14,13')
+                                            p.heuristic_point = '12,15'
+                                            if s['12,15'] == 'B':
+                                                pieces_dict.remove('12,15')
+                                                p.heuristic_point = '15,12'
+                                                if s['15,12'] == 'B':
+                                                    pieces_dict.remove('15,12')
+                                                    p.heuristic_point = '13,13'
+                                                    if s['13,13'] == 'B':
+                                                        pieces_dict.remove('13,13')
+                                                        p.heuristic_point = '12,14'
+                                                        if s['12,14'] == 'B':
+                                                            pieces_dict.remove('12,14')
+                                                            p.heuristic_point = '14,12'
+                                                            if s['14,12'] == 'B':
+                                                                pieces_dict.remove('14,12')
+                                                                p.heuristic_point = '11,15'
+                                                                if s['11,15'] == 'B':
+                                                                    pieces_dict.remove('11,15')
+                                                                    p.heuristic_point = '15,11'
+                                                                    if s['15,11'] == 'B':
+                                                                        pieces_dict.remove('15,11')
+                                                                        p.heuristic_point = '12,13'
+                                                                        if s['12,13'] == 'B':
+                                                                            pieces_dict.remove('12,13')
+                                                                            p.heuristic_point = '13,12'
+                                                                            if s['13,12'] == 'B':
+                                                                                pieces_dict.remove('13,12')
+                                                                                p.heuristic_point = '11,14'
+                                                                                if s['11,14'] == 'B':
+                                                                                    pieces_dict.remove('11,14')
+                                                                                    p.heuristic_point = '14,11'
 
     # Iterate over pieces vs board
     for piece_location in pieces_dict:
@@ -209,17 +220,17 @@ def actions(s, p):
         x = int(piece_pos_elements[0])
         y = int(piece_pos_elements[1])
 
-        if CURRENT_DEPTH <= 2 and len(pieces_in_camp) == 1:
+        if piece_location in pieces_in_camp:
             if p.color == PlayerColor.WHITE:
                 empty_space_array_check = [
                     str(x - 1) + ',' + str(y - 1),
                     str(x) + ',' + str(y - 1),
-                    str(x + 1) + ',' + str(y - 1)]
+                    str(x - 1) + ',' + str(y)]
             else:
                 empty_space_array_check = [
-                    str(x - 1) + ',' + str(y + 1),
+                    str(x + 1) + ',' + str(y + 1),
                     str(x) + ',' + str(y + 1),
-                    str(x + 1) + ',' + str(y + 1)]
+                    str(x + 1) + ',' + str(y)]
         else:
             empty_space_array_check = [str(x - 1) + ',' + str(y - 1), str(x - 1) + ',' + str(y),
                                        str(x - 1) + ',' + str(y + 1),
@@ -285,6 +296,7 @@ def actions(s, p):
 
         for action in jumps_queue:
             actions.append(action)
+
     return actions
 
 
@@ -363,7 +375,7 @@ def utility(s):
             piece_pos_elements = piece.split(',')
             x = int(piece_pos_elements[0])
             y = int(piece_pos_elements[1])
-            total_distance_b += abs(final_x - x) + abs(final_y - y)
+            total_distance_b += abs(15 - x) + abs(15 - y)
         return -total_distance_b
 
 
@@ -451,6 +463,7 @@ def min_value(state, alpha, beta, depth):
     return value
 
 
+calibration = None
 start = timer()
 input_f = open("input.txt", "r")
 game = input_f.readline().rstrip()
@@ -481,29 +494,59 @@ for i in range(0, BOARD_SIZE):
         pos = pos = str(i) + ',' + str(j)
         board_dict[pos] = board_graph[j][i]
 
-CURRENT_DEPTH = 2
+
+if not calibration:
+    if game == SINGLE_GAME:
+        CURRENT_DEPTH = 2
+    else:
+        value_utility = utility(board_dict)
+        if value_utility <= -360 or value_utility >= -212:
+            CURRENT_DEPTH = 2
+        else:
+            CURRENT_DEPTH = 1
 
 # Output processing
 
+action_alphabeta = alpha_beta_search(board_dict)
+# printState(result(board_dict, action_alphabeta))
+
+if path.exists("output.txt"):
+    os.remove("output.txt")
+
+output_f = open("output.txt", 'w')
+
+if action_alphabeta:
+    output_f.write(action_alphabeta.action_type.name + " " + action_alphabeta.original_pos + " " + action_alphabeta.moves[0])
+    # print(action_alphabeta.action_type.name + " " + action_alphabeta.original_pos + " " + action_alphabeta.moves[0])
+    if action_alphabeta.action_type.name == 'J':
+        for i in range(0, len(action_alphabeta.moves) - 1):
+            output_f.write('\n')
+            # print(action_alphabeta.action_type.name + " " + action_alphabeta.moves[i] + " " + action_alphabeta.moves[i+1])
+            output_f.write(action_alphabeta.action_type.name + " " + action_alphabeta.moves[i] + " " + action_alphabeta.moves[i+1])
+
+output_f.close()
+
+# end = timer()
+# print(str(end - start) + " seg")
 
 # Test state
 
-printState(board_dict)
-print("----------------")
-print("Alphabeta")
-print("----------------")
-action_alphabeta = alpha_beta_search(board_dict)
-s1 = result(board_dict, action_alphabeta)
-printState(s1)
-end = timer()
-print(str(end - start) + " seg")
+# printState(board_dict)
+# print("----------------")
+# print("Alphabeta")
+# print("----------------")
+# action_alphabeta = alpha_beta_search(board_dict)
+# s1 = result(board_dict, action_alphabeta)
+# printState(s1)
+# end = timer()
+# print(str(end - start) + " seg")
 
 # Tests
 
 # Test against similar agent
 # total_time_w = 0
 # total_time_b = 0
-# for i in range(0, 500):
+# while True:
 #
 #     print("BLACK " + str(i))
 #     start_ind_b = timer()
@@ -511,7 +554,7 @@ print(str(end - start) + " seg")
 #     value_utility = utility(board_dict)
 #     print(value_utility)
 #     if value_utility <= -360 or value_utility >= -212:
-#         CURRENT_DEPTH = 2
+#         CURRENT_DEPTH = 1
 #     else:
 #         CURRENT_DEPTH = 1
 #
@@ -521,11 +564,12 @@ print(str(end - start) + " seg")
 #
 #     end_ind_b = timer()
 #     total_time_b += end_ind_b - start_ind_b
-#     if total_time_b > 310:
-#         break
+#     # if total_time_b > 310:
+#     #     break
 #
 #     if terminal_test(s1):
 #         break
+#     print("total current iteration b " + str(end_ind_b - start_ind_b) + " seg")
 #
 #     MAX_player = None
 #     MIN_player = None
@@ -548,9 +592,11 @@ print(str(end - start) + " seg")
 #
 #     end_ind_w = timer()
 #     total_time_w += end_ind_w - start_ind_w
-#     if total_time_w > 310:
+#     # if total_time_w > 310:
+#     #     break
+#     if terminal_test(s1):
 #         break
-#
+#     print("total current iteration w " + str(end_ind_w - start_ind_w) + " seg")
 #
 #     MAX_player = None
 #     MIN_player = None
@@ -558,8 +604,7 @@ print(str(end - start) + " seg")
 #     MIN_player = Player(PlayerColor.WHITE, PlayerType.MIN)
 #
 # print("total time b " + str(total_time_b) + " seg")
-#
-# print("total time w" + str(total_time_w) + " seg")
+# print("total time w " + str(total_time_w) + " seg")
 
 # Test available actions
 # actions = actions(s0)

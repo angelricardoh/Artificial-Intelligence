@@ -375,7 +375,7 @@ def utility(s):
             piece_pos_elements = piece.split(',')
             x = int(piece_pos_elements[0])
             y = int(piece_pos_elements[1])
-            total_distance_b += abs(final_x - x) + abs(final_y - y)
+            total_distance_b += abs(15 - x) + abs(15 - y)
         return -total_distance_b
 
 
@@ -384,39 +384,6 @@ def printState(s):
         for j in range(0, BOARD_SIZE):
             print(s[str(j) + "," + str(i)], end='')
         print()
-
-
-# Minimax
-
-def minimax_decision(state):
-    max_utility = float("-inf")
-
-    possible_actions = actions(state, MAX_player)
-    for action in possible_actions:
-        utility_value = min_value_minimax(result(state, action), 1)
-        if utility_value > max_utility:
-            max_utility = utility_value
-            max_utility_action = action
-    return max_utility_action
-
-
-def max_value_minimax(state, d):
-    if terminal_test(state) or cutoff_test(d):
-        return utility(state)
-    value = float("-inf")
-    for action in actions(state, MAX_player):
-        value = max(value, min_value_minimax(result(state, action), d + 1))
-    return value
-
-
-def min_value_minimax(state, d):
-    if terminal_test(state) or cutoff_test(d):
-        return utility(state)
-    value = float("inf")
-    for action in actions(state, MIN_player):
-        value = min(value, max_value_minimax(result(state, action), d + 1))
-    return value
-
 
 # Alpha-beta
 def alpha_beta_search(state):
@@ -462,26 +429,38 @@ def min_value(state, alpha, beta, depth):
         beta = min(beta, value)
     return value
 
-calibration = None
-start = timer()
-input_f = open("input.txt", "r")
-game = input_f.readline().rstrip()
-color = input_f.readline().rstrip()
-time = float(input_f.readline().rstrip())
 
-MAX_player = Player(PlayerColor[color], PlayerType.MAX)
+start = timer()
+game = "GAME"
+
+MAX_player = Player(PlayerColor.BLACK, PlayerType.MAX)
 if MAX_player.color == PlayerColor.WHITE:
     MIN_player = Player(PlayerColor.BLACK, PlayerType.MIN)
 else:
     MIN_player = Player(PlayerColor.WHITE, PlayerType.MIN)
 
 # Bidimensional array or dictionary
-board_lines = input_f.readlines()
+board_lines = ['BBBBB...........\n',
+               'BBBBB...........\n',
+               'BBBB............\n',
+               'BBB.............\n',
+               'BB..............\n',
+               '................\n',
+               '................\n',
+               '................\n',
+               '................\n',
+               '................\n',
+               '..............WW\n',
+               '.............WWW\n',
+               '............WWWW\n',
+               '...........WWWWW\n',
+               '...........WWWWW']
 board_graph = [[0 for x in range(BOARD_SIZE)] for y in range(BOARD_SIZE)]
+
 board = [[0 for x in range(BOARD_SIZE)] for y in range(BOARD_SIZE)]
-input_f.close()
 
 board_dict = {}
+print(board_lines)
 
 i = 0
 for line in board_lines:
@@ -493,139 +472,75 @@ for i in range(0, BOARD_SIZE):
         pos = pos = str(i) + ',' + str(j)
         board_dict[pos] = board_graph[j][i]
 
+if path.exists("calibration.txt"):
+     os.remove("calibration.txt")
+output_f = open("calibration.txt", 'w')
 
-if not calibration:
-    if game == SINGLE_GAME:
-        CURRENT_DEPTH = 2
+# Test against similar agent
+total_time_w = 0
+total_time_b = 0
+i = 0
+while True:
+    i += 1
+    print("BLACK " + str(i))
+    start_ind_b = timer()
+    
+    value_utility = utility(board_dict)
+    print(value_utility)
+    
+    # if value_utility <= -360 or value_utility >= -212:
+    #     CURRENT_DEPTH = 2
+    # else:
+    CURRENT_DEPTH = 2
+    
+    action_minimax = alpha_beta_search(board_dict)
+    s1 = result(board_dict, action_minimax)
+    printState(s1)
+    
+    end_ind_b = timer()
+    total_time_b += end_ind_b - start_ind_b
+    # if total_time_b > 310:
+    #     break
+    
+    if terminal_test(s1):
+        break
+    print("total current iteration b " + str(end_ind_b - start_ind_b) + " seg")
+    
+    MAX_player = None
+    MIN_player = None
+    MAX_player = Player(PlayerColor.WHITE, PlayerType.MAX)
+    MIN_player = Player(PlayerColor.BLACK, PlayerType.MIN)
+    
+    
+    print("WHITE " + str(i))
+    start_ind_w = timer()
+    
+    value_utility = utility(s1)
+    print(value_utility)
+    if value_utility <= -360 or value_utility >= -212:
+        CURRENT_DEPTH = 1
     else:
-        value_utility = utility(board_dict)
-        if value_utility <= -360 or value_utility >= -212:
-            CURRENT_DEPTH = 1
-        else:
-            CURRENT_DEPTH = 1
+        CURRENT_DEPTH = 1
 
-# Output processing
+    action_alphabeta = alpha_beta_search(s1)
+    s2 = result(s1, action_alphabeta)
+    printState(s2)
+    board_dict = s2
 
-action_alphabeta = alpha_beta_search(board_dict)
-# printState(result(board_dict, action_alphabeta))
+    end_ind_w = timer()
+    total_time_w += end_ind_w - start_ind_w
+    # if total_time_w > 310:
+    #     break
+    if terminal_test(s1):
+        break
+    print("total current iteration w " + str(end_ind_w - start_ind_w) + " seg")
+    
+    MAX_player = None
+    MIN_player = None
+    MAX_player = Player(PlayerColor.BLACK, PlayerType.MAX)
+    MIN_player = Player(PlayerColor.WHITE, PlayerType.MIN)
 
-if path.exists("output.txt"):
-    os.remove("output.txt")
-
-output_f = open("output.txt", 'w')
-
-if action_alphabeta:
-    output_f.write(action_alphabeta.action_type.name + " " + action_alphabeta.original_pos + " " + action_alphabeta.moves[0])
-    # print(action_alphabeta.action_type.name + " " + action_alphabeta.original_pos + " " + action_alphabeta.moves[0])
-    if action_alphabeta.action_type.name == 'J':
-        for i in range(0, len(action_alphabeta.moves) - 1):
-            output_f.write('\n')
-            # print(action_alphabeta.action_type.name + " " + action_alphabeta.moves[i] + " " + action_alphabeta.moves[i+1])
-            output_f.write(action_alphabeta.action_type.name + " " + action_alphabeta.moves[i] + " " + action_alphabeta.moves[i+1])
-
-output_f.close()
-
-# end = timer()
-# print(str(end - start) + " seg")
+print("total time b " + str(total_time_b) + " seg")
+print("total time w " + str(total_time_w) + " seg")
 
 
-######################
-# Tests              #
-######################
-
-# # Test against similar agent
-# total_time_w = 0
-# total_time_b = 0
-# i = 0
-# while True:
-#     i += 1
-#     print("BLACK " + str(i))
-#     start_ind_b = timer()
-#
-#     value_utility = utility(board_dict)
-#     print(value_utility)
-#
-#     # if value_utility <= -360 or value_utility >= -212:
-#     #     CURRENT_DEPTH = 2
-#     # else:
-#     CURRENT_DEPTH = 1
-#
-#     action_minimax = alpha_beta_search(board_dict)
-#     s1 = result(board_dict, action_minimax)
-#     printState(s1)
-#
-#     end_ind_b = timer()
-#     total_time_b += end_ind_b - start_ind_b
-#     # if total_time_b > 310:
-#     #     break
-#
-#     if terminal_test(s1):
-#         break
-#     print("total current iteration b " + str(end_ind_b - start_ind_b) + " seg")
-#
-#     MAX_player = None
-#     MIN_player = None
-#     MAX_player = Player(PlayerColor.WHITE, PlayerType.MAX)
-#     MIN_player = Player(PlayerColor.BLACK, PlayerType.MIN)
-#
-#
-#     print("WHITE " + str(i))
-#     start_ind_w = timer()
-#
-#     value_utility = utility(s1)
-#     print(value_utility)
-#     # if value_utility <= -360 or value_utility >= -212:
-#     #     CURRENT_DEPTH = 1
-#     # else:
-#     #     CURRENT_DEPTH = 1
-#     if value_utility >= 80:
-#         CURRENT_DEPTH = 0
-#
-#     action_alphabeta = alpha_beta_search(s1)
-#     s2 = result(s1, action_alphabeta)
-#     printState(s2)
-#     board_dict = s2
-#
-#     end_ind_w = timer()
-#     total_time_w += end_ind_w - start_ind_w
-#     # if total_time_w > 310:
-#     #     break
-#     if terminal_test(s1):
-#         break
-#
-#     print("total current iteration w " + str(end_ind_w - start_ind_w) + " seg")
-#
-#     MAX_player = None
-#     MIN_player = None
-#     MAX_player = Player(PlayerColor.BLACK, PlayerType.MAX)
-#     MIN_player = Player(PlayerColor.WHITE, PlayerType.MIN)
-#
-# print("total time b " + str(total_time_b) + " seg")
-# print("total time w " + str(total_time_w) + " seg")
-
-# Test state
-
-# printState(board_dict)
-# print("----------------")
-# print("Alphabeta")
-# print("----------------")
-# action_alphabeta = alpha_beta_search(board_dict)
-# s1 = result(board_dict, action_alphabeta)
-# printState(s1)
-# end = timer()
-# print(str(end - start) + " seg")
-
-# Test available actions
-# actions = actions(s0)
-# Print available actions
-# for item in actions:
-#     if item.action_type == ActionType.J:
-#         print(item.description())
-
-# Test MAX_player utility
-# print(utility(s0, MAX_player))
-
-# Test result action
-# print(actions[0])
-# s1 = result(s0, actions[0])
-# printState(s1)

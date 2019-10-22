@@ -2,6 +2,7 @@ import os.path
 from os import path
 from enum import Enum
 from timeit import default_timer as timer
+import math
 
 # Global variables
 
@@ -9,6 +10,8 @@ MAX_DEPTH = 2
 CURRENT_DEPTH = MAX_DEPTH
 BOARD_SIZE = 16
 SINGLE_GAME = "SINGLE"
+UTILITY_RANGE = 9
+HEURISTIC_MIDDLE_POINT = -206
 
 def split(word):
     return list(word)
@@ -365,7 +368,8 @@ def utility(s):
             piece_pos_elements = piece.split(',')
             x = int(piece_pos_elements[0])
             y = int(piece_pos_elements[1])
-            total_distance_w += abs(final_x - x) + abs(final_y - y)
+            total_distance_w += math.sqrt(pow(final_x - x, 2) + pow(final_y - y, 2))
+            # total_distance_w += abs(final_x - x) + abs(final_y - y)
         return -total_distance_w
     else:
         total_distance_b = 0
@@ -375,7 +379,8 @@ def utility(s):
             piece_pos_elements = piece.split(',')
             x = int(piece_pos_elements[0])
             y = int(piece_pos_elements[1])
-            total_distance_b += abs(final_x - x) + abs(final_y - y)
+            total_distance_b += math.sqrt(pow(final_x - x, 2) + pow(final_y - y, 2))
+            # total_distance_b += abs(final_x - x) + abs(final_y - y)
         return -total_distance_b
 
 
@@ -462,8 +467,6 @@ def min_value(state, alpha, beta, depth):
         beta = min(beta, value)
     return value
 
-calibration = None
-start = timer()
 input_f = open("input.txt", "r")
 game = input_f.readline().rstrip()
 color = input_f.readline().rstrip()
@@ -493,16 +496,31 @@ for i in range(0, BOARD_SIZE):
         pos = pos = str(i) + ',' + str(j)
         board_dict[pos] = board_graph[j][i]
 
+calibration_ratio = 0
+if path.exists("calibration.txt"):
+    input_c = open("calibration.txt", "r")
+    calibration_string = input_c.readline().rstrip()
+    if calibration_string != '':
+        calibration_ratio = float(calibration_string)
+    input_c.close()
 
-if not calibration:
-    if game == SINGLE_GAME:
-        CURRENT_DEPTH = 2
+utility_lower_limit = HEURISTIC_MIDDLE_POINT - UTILITY_RANGE
+utility_higher_limit = HEURISTIC_MIDDLE_POINT + UTILITY_RANGE
+
+if game == SINGLE_GAME:
+    CURRENT_DEPTH = 2
+else:
+    if calibration_ratio:
+        utility_lower_limit = HEURISTIC_MIDDLE_POINT - (UTILITY_RANGE * calibration_ratio)
+        utility_higher_limit = HEURISTIC_MIDDLE_POINT + (UTILITY_RANGE * calibration_ratio)
+
+    value_utility = utility(board_dict)
+    print(utility_lower_limit)
+    print(utility_higher_limit)
+    if value_utility <= utility_lower_limit or value_utility >= utility_higher_limit:
+        CURRENT_DEPTH = 1
     else:
-        value_utility = utility(board_dict)
-        if value_utility <= -360 or value_utility >= -212:
-            CURRENT_DEPTH = 1
-        else:
-            CURRENT_DEPTH = 1
+        CURRENT_DEPTH = 2
 
 # Output processing
 
@@ -525,83 +543,77 @@ if action_alphabeta:
 
 output_f.close()
 
-# end = timer()
-# print(str(end - start) + " seg")
-
 
 ######################
 # Tests              #
 ######################
 
 # # Test against similar agent
-# total_time_w = 0
-# total_time_b = 0
+# total_time_player_two = 0
+# total_time_player_one = 0
 # i = 0
-# while True:
+# for i in range(0, 170):
 #     i += 1
-#     print("BLACK " + str(i))
-#     start_ind_b = timer()
+#     print("MAX " + str(i))
+#     start_time_player_one = timer()
 #
 #     value_utility = utility(board_dict)
 #     print(value_utility)
-#
-#     # if value_utility <= -360 or value_utility >= -212:
-#     #     CURRENT_DEPTH = 2
-#     # else:
-#     CURRENT_DEPTH = 1
+#     if value_utility <= utility_lower_limit or value_utility >= utility_higher_limit:
+#         CURRENT_DEPTH = 1
+#     else:
+#         print("depth 2")
+#         CURRENT_DEPTH = 2
 #
 #     action_minimax = alpha_beta_search(board_dict)
 #     s1 = result(board_dict, action_minimax)
 #     printState(s1)
 #
-#     end_ind_b = timer()
-#     total_time_b += end_ind_b - start_ind_b
-#     # if total_time_b > 310:
+#     end_time_player_one = timer()
+#     total_time_player_one += end_time_player_one - start_time_player_one
+#     # if total_time_b > 1500:
 #     #     break
-#
 #     if terminal_test(s1):
 #         break
-#     print("total current iteration b " + str(end_ind_b - start_ind_b) + " seg")
+#     print("total current iteration player one " + str(end_time_player_one - start_time_player_one) + " seg")
 #
 #     MAX_player = None
 #     MIN_player = None
-#     MAX_player = Player(PlayerColor.WHITE, PlayerType.MAX)
-#     MIN_player = Player(PlayerColor.BLACK, PlayerType.MIN)
+#     # MAX_player = Player(PlayerColor.WHITE, PlayerType.MAX)
+#     # MIN_player = Player(PlayerColor.BLACK, PlayerType.MIN)
+#     MAX_player = Player(PlayerColor.BLACK, PlayerType.MAX)
+#     MIN_player = Player(PlayerColor.WHITE, PlayerType.MIN)
 #
-#
-#     print("WHITE " + str(i))
-#     start_ind_w = timer()
+#     print("MIN " + str(i))
+#     start_time_player_two = timer()
 #
 #     value_utility = utility(s1)
 #     print(value_utility)
-#     # if value_utility <= -360 or value_utility >= -212:
-#     #     CURRENT_DEPTH = 1
-#     # else:
-#     #     CURRENT_DEPTH = 1
-#     if value_utility >= 80:
-#         CURRENT_DEPTH = 0
+#     CURRENT_DEPTH = 1
 #
 #     action_alphabeta = alpha_beta_search(s1)
 #     s2 = result(s1, action_alphabeta)
 #     printState(s2)
 #     board_dict = s2
 #
-#     end_ind_w = timer()
-#     total_time_w += end_ind_w - start_ind_w
-#     # if total_time_w > 310:
+#     end_time_player_two = timer()
+#     total_time_player_two += end_time_player_two - start_time_player_two
+#     # if total_time_w > 1500:
 #     #     break
 #     if terminal_test(s1):
 #         break
 #
-#     print("total current iteration w " + str(end_ind_w - start_ind_w) + " seg")
+#     print("total current iteration player two " + str(end_time_player_two - start_time_player_two) + " seg")
 #
 #     MAX_player = None
 #     MIN_player = None
-#     MAX_player = Player(PlayerColor.BLACK, PlayerType.MAX)
-#     MIN_player = Player(PlayerColor.WHITE, PlayerType.MIN)
+#     # MAX_player = Player(PlayerColor.BLACK, PlayerType.MAX)
+#     # MIN_player = Player(PlayerColor.WHITE, PlayerType.MIN)
+#     MAX_player = Player(PlayerColor.WHITE, PlayerType.MAX)
+#     MIN_player = Player(PlayerColor.BLACK, PlayerType.MIN)
 #
-# print("total time b " + str(total_time_b) + " seg")
-# print("total time w " + str(total_time_w) + " seg")
+# print("total play time player one " + str(total_time_player_one) + " seg")
+# print("total play time player two " + str(total_time_player_two) + " seg")
 
 # Test state
 

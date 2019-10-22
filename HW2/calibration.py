@@ -2,6 +2,7 @@ import os.path
 from os import path
 from enum import Enum
 from timeit import default_timer as timer
+import math
 
 MAX_DEPTH = 2
 CURRENT_DEPTH = MAX_DEPTH
@@ -363,7 +364,8 @@ def utility(s):
             piece_pos_elements = piece.split(',')
             x = int(piece_pos_elements[0])
             y = int(piece_pos_elements[1])
-            total_distance_w += abs(final_x - x) + abs(final_y - y)
+            total_distance_w += math.sqrt(pow(final_x - x, 2) + pow(final_y - y, 2))
+            # total_distance_w += abs(final_x - x) + abs(final_y - y)
         return -total_distance_w
     else:
         total_distance_b = 0
@@ -373,7 +375,8 @@ def utility(s):
             piece_pos_elements = piece.split(',')
             x = int(piece_pos_elements[0])
             y = int(piece_pos_elements[1])
-            total_distance_b += abs(final_x - x) + abs(final_y - y)
+            total_distance_b += math.sqrt(pow(final_x - x, 2) + pow(final_y - y, 2))
+            # total_distance_b += abs(final_x - x) + abs(final_y - y)
         return -total_distance_b
 
 
@@ -470,27 +473,27 @@ else:
     MIN_player = Player(PlayerColor.WHITE, PlayerType.MIN)
 
 # Bidimensional array or dictionary
-board_lines = ['................\n',
-               '.....W..........\n',
+board_lines = ['....WW..........\n',
                '.....B..........\n',
-               '...W............\n',
-               'WB.W............\n',
-               '...B.WBWW.......\n',
-               '.B........W.....\n',
-               '.B.B.WB.W.......\n',
+               '..WW............\n',
+               '...BB.B.........\n',
+               'W.W.............\n',
+               '..B.BBBB........\n',
+               '.....B..........\n',
+               '.....B..WW......\n',
+               '.........B.B....\n',
+               '.......W..W.....\n',
+               '.........W.BBWW.\n',
+               '..........WWW...\n',
+               '.........W.W.BB.\n',
                '..........W.....\n',
-               '...W..........W.\n',
-               '.....B..W...W...\n',
-               '.......W..W..B..\n',
-               '.............B..\n',
-               '........B.W.....\n',
-               '........BBBBB...']
+               '..........B..B..\n',
+               '................']
 board_graph = [[0 for x in range(BOARD_SIZE)] for y in range(BOARD_SIZE)]
 
 board = [[0 for x in range(BOARD_SIZE)] for y in range(BOARD_SIZE)]
 
 board_dict = {}
-print(board_lines)
 
 i = 0
 for line in board_lines:
@@ -508,39 +511,33 @@ output_f = open("calibration.txt", 'w')
 
 CURRENT_DEPTH = 2
 
-start = timer()
+start_first_iter = timer()
 
 action_alphabeta = alpha_beta_search(board_dict)
-print(action_alphabeta.description())
-printState(result(board_dict, action_alphabeta))
 
-end = timer()
-print(str(end - start) + " seg")
-output_f.write(str(end - start) + "\n")
+end_first_iter = timer()
 
-CURRENT_DEPTH = 3
-
-start = timer()
+start_second_iter = timer()
 
 action_alphabeta = alpha_beta_search(board_dict)
-print(action_alphabeta.description())
-printState(result(board_dict, action_alphabeta))
 
-end = timer()
-print(str(end - start) + " seg")
-output_f.write(str(end - start) + "\n")
+end_second_iter = timer()
 
-CURRENT_DEPTH = 4
-
-start = timer()
+start_third_iter = timer()
 
 action_alphabeta = alpha_beta_search(board_dict)
-print(action_alphabeta.description())
-printState(result(board_dict, action_alphabeta))
 
-end = timer()
-print(str(end - start) + " seg")
-output_f.write(str(end - start) + "\n")
+end_third_iter = timer()
+
+average_time = ((end_first_iter - start_first_iter) + (end_second_iter - start_second_iter) + (end_third_iter - start_third_iter)) / 3
+ratio = 45.47 / average_time
+
+print(average_time)
+print(ratio)
+
+output_f.write(str(ratio) + "\n")
+output_f.close()
+
 
 
 

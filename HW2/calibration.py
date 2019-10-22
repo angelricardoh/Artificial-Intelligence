@@ -261,22 +261,48 @@ def actions(s, p):
 
             start_search = False
 
-            possible_pieces_pos_array = [str(x - 1) + ',' + str(y - 1),
-                                         str(x - 1) + ',' + str(y),
-                                         str(x - 1) + ',' + str(y + 1),
-                                         str(x) + ',' + str(y - 1),
-                                         str(x) + ',' + str(y + 1),
-                                         str(x + 1) + ',' + str(y - 1),
-                                         str(x + 1) + ',' + str(y),
-                                         str(x + 1) + ',' + str(y + 1)]  # type: [String]
-            possible_jump_pos_array = [str(x - 2) + ',' + str(y - 2),
-                                       str(x - 2) + ',' + str(y),
-                                       str(x - 2) + ',' + str(y + 2),
-                                       str(x) + ',' + str(y - 2),
-                                       str(x) + ',' + str(y + 2),
-                                       str(x + 2) + ',' + str(y - 2),
-                                       str(x + 2) + ',' + str(y),
-                                       str(x + 2) + ',' + str(y + 2)]
+            if game == SINGLE_GAME:
+                possible_pieces_pos_array = [str(x - 1) + ',' + str(y - 1),
+                                             str(x - 1) + ',' + str(y),
+                                             str(x - 1) + ',' + str(y + 1),
+                                             str(x) + ',' + str(y - 1),
+                                             str(x) + ',' + str(y + 1),
+                                             str(x + 1) + ',' + str(y - 1),
+                                             str(x + 1) + ',' + str(y),
+                                             str(x + 1) + ',' + str(y + 1)]  # type: [String]
+                possible_jump_pos_array = [str(x - 2) + ',' + str(y - 2),
+                                           str(x - 2) + ',' + str(y),
+                                           str(x - 2) + ',' + str(y + 2),
+                                           str(x) + ',' + str(y - 2),
+                                           str(x) + ',' + str(y + 2),
+                                           str(x + 2) + ',' + str(y - 2),
+                                           str(x + 2) + ',' + str(y),
+                                           str(x + 2) + ',' + str(y + 2)]
+            else:
+                if p.color == PlayerColor.WHITE:
+                    possible_pieces_pos_array = [str(x - 1) + ',' + str(y - 1),
+                                               str(x - 1) + ',' + str(y),
+                                               str(x - 1) + ',' + str(y + 1),
+                                           str(x) + ',' + str(y - 1),
+                                           str(x + 1) + ',' + str(y - 1)]
+                else:
+                    possible_pieces_pos_array = [str(x - 1) + ',' + str(y + 1),
+                                               str(x) + ',' + str(y + 1),
+                                               str(x + 1) + ',' + str(y - 1),
+                                               str(x + 1) + ',' + str(y),
+                                               str(x + 1) + ',' + str(y + 1)]
+                if p.color == PlayerColor.WHITE:
+                    possible_jump_pos_array = [str(x - 2) + ',' + str(y - 2),
+                                               str(x - 2) + ',' + str(y),
+                                               str(x - 2) + ',' + str(y + 1),
+                                               str(x) + ',' + str(y - 2),
+                                               str(x + 2) + ',' + str(y - 2)]
+                else:
+                    possible_jump_pos_array = [str(x - 2) + ',' + str(y + 2),
+                                               str(x) + ',' + str(y + 2),
+                                               str(x + 2) + ',' + str(y - 2),
+                                               str(x + 2) + ',' + str(y),
+                                               str(x + 2) + ',' + str(y + 2)]
 
 
             for i in range(0, len(possible_pieces_pos_array)):
@@ -365,7 +391,6 @@ def utility(s):
             x = int(piece_pos_elements[0])
             y = int(piece_pos_elements[1])
             total_distance_w += math.sqrt(pow(final_x - x, 2) + pow(final_y - y, 2))
-            # total_distance_w += abs(final_x - x) + abs(final_y - y)
         return -total_distance_w
     else:
         total_distance_b = 0
@@ -376,7 +401,6 @@ def utility(s):
             x = int(piece_pos_elements[0])
             y = int(piece_pos_elements[1])
             total_distance_b += math.sqrt(pow(final_x - x, 2) + pow(final_y - y, 2))
-            # total_distance_b += abs(final_x - x) + abs(final_y - y)
         return -total_distance_b
 
 
@@ -530,7 +554,7 @@ action_alphabeta = alpha_beta_search(board_dict)
 end_third_iter = timer()
 
 average_time = ((end_first_iter - start_first_iter) + (end_second_iter - start_second_iter) + (end_third_iter - start_third_iter)) / 3
-ratio = 45.47 / average_time
+ratio = 0.3634 / average_time
 
 print(average_time)
 print(ratio)

@@ -10,8 +10,8 @@ MAX_DEPTH = 2
 CURRENT_DEPTH = MAX_DEPTH
 BOARD_SIZE = 16
 SINGLE_GAME = "SINGLE"
-UTILITY_RANGE = 9
-HEURISTIC_MIDDLE_POINT = -206
+UTILITY_LOWER_BOUND = -258
+UTILITY_UPPER_BOUND = -154
 
 def split(word):
     return list(word)
@@ -235,11 +235,18 @@ def actions(s, p):
                     str(x) + ',' + str(y + 1),
                     str(x + 1) + ',' + str(y)]
         else:
-            empty_space_array_check = [str(x - 1) + ',' + str(y - 1), str(x - 1) + ',' + str(y),
-                                       str(x - 1) + ',' + str(y + 1),
-                                       str(x) + ',' + str(y - 1), str(x) + ',' + str(y + 1),
-                                       str(x + 1) + ',' + str(y - 1),
-                                       str(x + 1) + ',' + str(y), str(x + 1) + ',' + str(y + 1)]
+            if p.color == PlayerColor.WHITE:
+                empty_space_array_check = [str(x - 1) + ',' + str(y - 1),
+                                           str(x - 1) + ',' + str(y),
+                                           str(x - 1) + ',' + str(y + 1),
+                                           str(x) + ',' + str(y - 1),
+                                           str(x + 1) + ',' + str(y - 1)]
+            else:
+                empty_space_array_check = [str(x - 1) + ',' + str(y + 1),
+                                           str(x) + ',' + str(y + 1),
+                                           str(x + 1) + ',' + str(y - 1),
+                                           str(x + 1) + ',' + str(y),
+                                           str(x + 1) + ',' + str(y + 1)]
 
 
         for empty_space_pos in empty_space_array_check:
@@ -265,22 +272,30 @@ def actions(s, p):
 
             start_search = False
 
-            possible_pieces_pos_array = [str(x - 1) + ',' + str(y - 1),
-                                         str(x - 1) + ',' + str(y),
-                                         str(x - 1) + ',' + str(y + 1),
-                                         str(x) + ',' + str(y - 1),
-                                         str(x) + ',' + str(y + 1),
-                                         str(x + 1) + ',' + str(y - 1),
-                                         str(x + 1) + ',' + str(y),
-                                         str(x + 1) + ',' + str(y + 1)]  # type: [String]
-            possible_jump_pos_array = [str(x - 2) + ',' + str(y - 2),
-                                       str(x - 2) + ',' + str(y),
-                                       str(x - 2) + ',' + str(y + 2),
-                                       str(x) + ',' + str(y - 2),
-                                       str(x) + ',' + str(y + 2),
-                                       str(x + 2) + ',' + str(y - 2),
-                                       str(x + 2) + ',' + str(y),
-                                       str(x + 2) + ',' + str(y + 2)]
+            if p.color == PlayerColor.WHITE:
+                possible_pieces_pos_array = [str(x - 1) + ',' + str(y - 1),
+                                           str(x - 1) + ',' + str(y),
+                                           str(x - 1) + ',' + str(y + 1),
+                                       str(x) + ',' + str(y - 1),
+                                       str(x + 1) + ',' + str(y - 1)]
+            else:
+                possible_pieces_pos_array = [str(x - 1) + ',' + str(y + 1),
+                                           str(x) + ',' + str(y + 1),
+                                           str(x + 1) + ',' + str(y - 1),
+                                           str(x + 1) + ',' + str(y),
+                                           str(x + 1) + ',' + str(y + 1)]
+            if p.color == PlayerColor.WHITE:
+                possible_jump_pos_array = [str(x - 2) + ',' + str(y - 2),
+                                           str(x - 2) + ',' + str(y),
+                                           str(x - 2) + ',' + str(y + 2),
+                                           str(x) + ',' + str(y - 2),
+                                           str(x + 2) + ',' + str(y - 2)]
+            else:
+                possible_jump_pos_array = [str(x - 2) + ',' + str(y + 2),
+                                           str(x) + ',' + str(y + 2),
+                                           str(x + 2) + ',' + str(y - 2),
+                                           str(x + 2) + ',' + str(y),
+                                           str(x + 2) + ',' + str(y + 2)]
 
 
             for i in range(0, len(possible_pieces_pos_array)):
@@ -369,7 +384,6 @@ def utility(s):
             x = int(piece_pos_elements[0])
             y = int(piece_pos_elements[1])
             total_distance_w += math.sqrt(pow(final_x - x, 2) + pow(final_y - y, 2))
-            # total_distance_w += abs(final_x - x) + abs(final_y - y)
         return -total_distance_w
     else:
         total_distance_b = 0
@@ -380,7 +394,6 @@ def utility(s):
             x = int(piece_pos_elements[0])
             y = int(piece_pos_elements[1])
             total_distance_b += math.sqrt(pow(final_x - x, 2) + pow(final_y - y, 2))
-            # total_distance_b += abs(final_x - x) + abs(final_y - y)
         return -total_distance_b
 
 
@@ -496,36 +509,15 @@ for i in range(0, BOARD_SIZE):
         pos = pos = str(i) + ',' + str(j)
         board_dict[pos] = board_graph[j][i]
 
-calibration_ratio = 0
-if path.exists("calibration.txt"):
-    input_c = open("calibration.txt", "r")
-    calibration_string = input_c.readline().rstrip()
-    if calibration_string != '':
-        calibration_ratio = float(calibration_string)
-    input_c.close()
-
-utility_lower_limit = HEURISTIC_MIDDLE_POINT - UTILITY_RANGE
-utility_higher_limit = HEURISTIC_MIDDLE_POINT + UTILITY_RANGE
-
-if game == SINGLE_GAME:
-    CURRENT_DEPTH = 2
+value_utility = utility(board_dict)
+if game == SINGLE_GAME and (UTILITY_LOWER_BOUND <= value_utility >= UTILITY_UPPER_BOUND):
+    CURRENT_DEPTH = 3
 else:
-    if calibration_ratio:
-        utility_lower_limit = HEURISTIC_MIDDLE_POINT - (UTILITY_RANGE * calibration_ratio)
-        utility_higher_limit = HEURISTIC_MIDDLE_POINT + (UTILITY_RANGE * calibration_ratio)
-
-    value_utility = utility(board_dict)
-    print(utility_lower_limit)
-    print(utility_higher_limit)
-    if value_utility <= utility_lower_limit or value_utility >= utility_higher_limit:
-        CURRENT_DEPTH = 1
-    else:
-        CURRENT_DEPTH = 2
+    CURRENT_DEPTH = 2
 
 # Output processing
-
+start_time = timer()
 action_alphabeta = alpha_beta_search(board_dict)
-# printState(result(board_dict, action_alphabeta))
 
 if path.exists("output.txt"):
     os.remove("output.txt")
@@ -541,8 +533,10 @@ if action_alphabeta:
             # print(action_alphabeta.action_type.name + " " + action_alphabeta.moves[i] + " " + action_alphabeta.moves[i+1])
             output_f.write(action_alphabeta.action_type.name + " " + action_alphabeta.moves[i] + " " + action_alphabeta.moves[i+1])
 
+# printState(result(board_dict, action_alphabeta))
 output_f.close()
-
+end_time = timer()
+# print("total current " + str(end_time - start_time) + " seg")
 
 ######################
 # Tests              #
@@ -559,11 +553,7 @@ output_f.close()
 #
 #     value_utility = utility(board_dict)
 #     print(value_utility)
-#     if value_utility <= utility_lower_limit or value_utility >= utility_higher_limit:
-#         CURRENT_DEPTH = 1
-#     else:
-#         print("depth 2")
-#         CURRENT_DEPTH = 2
+#     CURRENT_DEPTH = 2
 #
 #     action_minimax = alpha_beta_search(board_dict)
 #     s1 = result(board_dict, action_minimax)
@@ -571,11 +561,11 @@ output_f.close()
 #
 #     end_time_player_one = timer()
 #     total_time_player_one += end_time_player_one - start_time_player_one
-#     # if total_time_b > 1500:
-#     #     break
+#     print("total current iteration player one " + str(end_time_player_one - start_time_player_one) + " seg")
+#     if total_time_player_one > 300:
+#         break
 #     if terminal_test(s1):
 #         break
-#     print("total current iteration player one " + str(end_time_player_one - start_time_player_one) + " seg")
 #
 #     MAX_player = None
 #     MIN_player = None

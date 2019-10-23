@@ -424,8 +424,6 @@ if path.exists("calibration.txt"):
 value_utility = utility(board_dict)
 utility_lower_bound = UTILITY_MIDDLE_POINT - UTILITY_RANGE
 utility_upper_bound = UTILITY_MIDDLE_POINT + UTILITY_RANGE
-# print("UTILITY_LOWER_BOUND = " + str(UTILITY_LOWER_BOUND))
-# print("UTILITY_UPPER_BOUND = " + str(UTILITY_UPPER_BOUND))
 
 # Depth designation
 
@@ -440,29 +438,27 @@ else:
     else:
         CURRENT_DEPTH = 2
 
-    print("utility_lower_bound = " + str(utility_lower_bound))
-    print("utility_upper_bound = " + str(utility_upper_bound))
-
 # Output processing
 
-# action_alphabeta = alpha_beta_search(board_dict)
-#
-# if path.exists("output.txt"):
-#     os.remove("output.txt")
-#
-# output_f = open("output.txt", 'w')
-#
-# if action_alphabeta:
-#     output_f.write(action_alphabeta.action_type.name + " " + action_alphabeta.original_pos + " " + action_alphabeta.moves[0])
-#     # print(action_alphabeta.action_type.name + " " + action_alphabeta.original_pos + " " + action_alphabeta.moves[0])
-#     if action_alphabeta.action_type.name == 'J':
-#         for i in range(0, len(action_alphabeta.moves) - 1):
-#             output_f.write('\n')
-#             # print(action_alphabeta.action_type.name + " " + action_alphabeta.moves[i] + " " + action_alphabeta.moves[i+1])
-#             output_f.write(action_alphabeta.action_type.name + " " + action_alphabeta.moves[i] + " " + action_alphabeta.moves[i+1])
-#
-# # printState(result(board_dict, action_alphabeta))
-# # output_f.close()
+action_alphabeta = alpha_beta_search(board_dict)
+
+if path.exists("output.txt"):
+    os.remove("output.txt")
+
+output_f = open("output.txt", 'w')
+
+if action_alphabeta:
+    output_f.write(action_alphabeta.action_type.name + " " + action_alphabeta.original_pos + " " + action_alphabeta.moves[0])
+    # print(action_alphabeta.action_type.name + " " + action_alphabeta.original_pos + " " + action_alphabeta.moves[0])
+    if action_alphabeta.action_type.name == 'J':
+        for i in range(0, len(action_alphabeta.moves) - 1):
+            output_f.write('\n')
+            # print(action_alphabeta.action_type.name + " " + action_alphabeta.moves[i] + " " + action_alphabeta.moves[i+1])
+            output_f.write(action_alphabeta.action_type.name + " " + action_alphabeta.moves[i] + " " + action_alphabeta.moves[i+1])
+
+output_f.close()
+
+# printState(result(board_dict, action_alphabeta))
 
 ######################
 # Tests              #
@@ -470,85 +466,88 @@ else:
 
 # Test against similar agent x times
 
-total_time_player_two = 0
-total_time_player_one = 0
-i = 0
-longest_action = -1
-longest_state_performed = None
-while True:
-    i += 1
-    # print("Agent One iteration: " + str(i))
-    start_time_player_one = timer()
-
-    value_utility = utility(board_dict)
-    # print(value_utility)
-    if value_utility >= utility_lower_bound and value_utility <= utility_upper_bound:
-        CURRENT_DEPTH = 3
-    else:
-        CURRENT_DEPTH = 2
-
-    action_minimax = alpha_beta_search(board_dict)
-    s1 = result(board_dict, action_minimax)
-    # printState(s1)
-
-    end_time_player_one = timer()
-    total_time_player_one += end_time_player_one - start_time_player_one
-    if end_time_player_one - start_time_player_one > longest_action:
-        longest_action = total_time_player_one
-        longest_state_performed = board_dict
-    # print("total current iteration player one " + str(end_time_player_one - start_time_player_one) + " seg")
-    if total_time_player_one > 400:
-        break
-
-    if terminal_test(s1):
-        # printState(s1)
-        print("total of iterations " + str(i))
-        break
-
-    MAX_player = None
-    MIN_player = None
-    # MAX_player = Player(PlayerColor.WHITE, PlayerType.MAX)
-    # MIN_player = Player(PlayerColor.BLACK, PlayerType.MIN)
-    MAX_player = Player(PlayerColor.BLACK, PlayerType.MAX)
-    MIN_player = Player(PlayerColor.WHITE, PlayerType.MIN)
-
-    # print("Agent Two iteration: " + str(i))
-    start_time_player_two = timer()
-
-    value_utility = utility(s1)
-    # print(value_utility)
-    CURRENT_DEPTH = 2
-
-    action_alphabeta = alpha_beta_search(s1)
-    s2 = result(s1, action_alphabeta)
-
-    if terminal_test(s2):
-        # printState(s2)
-        print("total of iterations " + str(i))
-        break
-
-    # printState(s2)
-    board_dict = s2
-
-    end_time_player_two = timer()
-    total_time_player_two += end_time_player_two - start_time_player_two
-    if total_time_player_two > 250:
-        break
-    # if terminal_test(s1):
-    #     break
-
-    # print("total current iteration player two " + str(end_time_player_two - start_time_player_two) + " seg")
-
-    MAX_player = None
-    MIN_player = None
-    # MAX_player = Player(PlayerColor.BLACK, PlayerType.MAX)
-    # MIN_player = Player(PlayerColor.WHITE, PlayerType.MIN)
-    MAX_player = Player(PlayerColor.WHITE, PlayerType.MAX)
-    MIN_player = Player(PlayerColor.BLACK, PlayerType.MIN)
-print("total play time player one " + str(total_time_player_one) + " seg")
-print("longest action = " + str(longest_action))
-print("longest state performed = ")
-printState(longest_state_performed)
+# print("utility_lower_bound = " + str(utility_lower_bound))
+# print("utility_upper_bound = " + str(utility_upper_bound))
+#
+# total_time_player_two = 0
+# total_time_player_one = 0
+# i = 0
+# longest_action = -1
+# longest_state_performed = None
+# while True:
+#     i += 1
+#     # print("Agent One iteration: " + str(i))
+#     start_time_player_one = timer()
+#
+#     value_utility = utility(board_dict)
+#     # print(value_utility)
+#     if value_utility >= utility_lower_bound and value_utility <= utility_upper_bound:
+#         print("depth 3")
+#         CURRENT_DEPTH = 3
+#     else:
+#         CURRENT_DEPTH = 2
+#
+#     action_minimax = alpha_beta_search(board_dict)
+#     s1 = result(board_dict, action_minimax)
+#     # printState(s1)
+#
+#     end_time_player_one = timer()
+#     total_time_player_one += end_time_player_one - start_time_player_one
+#     if end_time_player_one - start_time_player_one > longest_action:
+#         longest_action = total_time_player_one
+#         longest_state_performed = board_dict
+#     # print("total current iteration player one " + str(end_time_player_one - start_time_player_one) + " seg")
+#     if total_time_player_one > 300:
+#         break
+#
+#     if terminal_test(s1):
+#         # printState(s1)
+#         print("total of iterations " + str(i))
+#         break
+#
+#     MAX_player = None
+#     MIN_player = None
+#     # MAX_player = Player(PlayerColor.WHITE, PlayerType.MAX)
+#     # MIN_player = Player(PlayerColor.BLACK, PlayerType.MIN)
+#     MAX_player = Player(PlayerColor.BLACK, PlayerType.MAX)
+#     MIN_player = Player(PlayerColor.WHITE, PlayerType.MIN)
+#
+#     # print("Agent Two iteration: " + str(i))
+#     start_time_player_two = timer()
+#
+#     value_utility = utility(s1)
+#     # print(value_utility)
+#     CURRENT_DEPTH = 2
+#
+#     action_alphabeta = alpha_beta_search(s1)
+#     s2 = result(s1, action_alphabeta)
+#
+#     if terminal_test(s2):
+#         # printState(s2)
+#         print("total of iterations " + str(i))
+#         break
+#
+#     # printState(s2)
+#     board_dict = s2
+#
+#     end_time_player_two = timer()
+#     total_time_player_two += end_time_player_two - start_time_player_two
+#
+#     # if terminal_test(s1):
+#     #     break
+#
+#     # print("total current iteration player two " + str(end_time_player_two - start_time_player_two) + " seg")
+#
+#     MAX_player = None
+#     MIN_player = None
+#     # MAX_player = Player(PlayerColor.BLACK, PlayerType.MAX)
+#     # MIN_player = Player(PlayerColor.WHITE, PlayerType.MIN)
+#     MAX_player = Player(PlayerColor.WHITE, PlayerType.MAX)
+#     MIN_player = Player(PlayerColor.BLACK, PlayerType.MIN)
+# print("total play time player one " + str(total_time_player_one) + " seg")
+# print("longest action = " + str(longest_action))
+# print("longest state performed = ")
+# printState(longest_state_performed)
 
 # Test state
 

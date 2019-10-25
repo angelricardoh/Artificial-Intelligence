@@ -1,5 +1,5 @@
-for ((i=1; i <= 20 ; i++)); do
+for ((i=1; i <= 100 ; i++)); do
 	echo $i
     python3 homework3.py
-    sleep 300 
+    sleep 400
 done

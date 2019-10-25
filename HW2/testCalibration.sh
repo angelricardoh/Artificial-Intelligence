@@ -1,5 +1,4 @@
-for ((i=1; i <= 20 ; i++)); do
-	echo $i
+for ((i=1; i <= 100 ; i++)); do
     python3 calibration3.py
-    sleep 300 
+    sleep 50
 done

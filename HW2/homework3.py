@@ -11,17 +11,10 @@ CURRENT_DEPTH = MAX_DEPTH
 BOARD_SIZE = 16
 SINGLE_GAME = "SINGLE"
 UTILITY_MIDDLE_POINT = -206
-UTILITY_RANGE = 9
-UTILITY_FIRST_THIRD_POINT = -258
-UTILITY_SECOND_THIRD_POINT = -154
+UTILITY_RANGE = 3.02
 
 def split(word):
     return list(word)
-
-
-def Merge(dict1, dict2):
-    res = {**dict1, **dict2}
-    return res
 
 
 class PlayerType(Enum):
@@ -73,8 +66,8 @@ def actions(s, p):
         player_movable_pieces = [key for (key, value) in s.items() if value == 'W']
     else:
         player_movable_pieces = [key for (key, value) in s.items() if value == 'B']
-    if p.color == PlayerColor.WHITE:
-        player_movable_pieces.sort(reverse=False)
+    if p.playerType == PlayerType.MAX:
+        player_movable_pieces.sort(reverse=True)
 
     for piece_location in player_movable_pieces:
         piece_pos_elements = piece_location.split(',')
@@ -239,17 +232,17 @@ def terminal_test(s):
             total_pieces += 1
     if total_pieces == 19:
         return True
-    # pieces_b = [key for (key, value) in s.items() if value == 'B']
-    # total_pieces = 0
-    # for piece in pieces_b:
-    #     piece_pos_elements = piece.split(',')
-    #     x = int(piece_pos_elements[0])
-    #     y = int(piece_pos_elements[1])
-    #     if (x >= 11 and y == 15) or (x >= 11 and y >= 14) or (x >= 12 and y >= 13) or (x >= 13 and y >= 12) or (
-    #             x >= 14 and y >= 11):
-    #         total_pieces += 1
-    # if total_pieces == 19:
-    #     return True
+    pieces_b = [key for (key, value) in s.items() if value == 'B']
+    total_pieces = 0
+    for piece in pieces_b:
+        piece_pos_elements = piece.split(',')
+        x = int(piece_pos_elements[0])
+        y = int(piece_pos_elements[1])
+        if (x >= 11 and y == 15) or (x >= 11 and y >= 14) or (x >= 12 and y >= 13) or (x >= 13 and y >= 12) or (
+                x >= 14 and y >= 11):
+            total_pieces += 1
+    if total_pieces == 19:
+        return True
     return False
 
 
@@ -430,10 +423,12 @@ utility_upper_bound = UTILITY_MIDDLE_POINT + UTILITY_RANGE
 if game == SINGLE_GAME:
     CURRENT_DEPTH = 1
 else:
+    utility_upper_bound = utility_lower_bound = UTILITY_MIDDLE_POINT
     if calibration_ratio:
-        utility_lower_bound = UTILITY_MIDDLE_POINT - (UTILITY_RANGE * calibration_ratio)
-        utility_upper_bound = UTILITY_MIDDLE_POINT + (UTILITY_RANGE * calibration_ratio)
-    if value_utility >= utility_lower_bound and value_utility <= utility_upper_bound:
+        if calibration_ratio >= 1.0:
+            utility_lower_bound = UTILITY_MIDDLE_POINT - (UTILITY_RANGE * calibration_ratio)
+            utility_upper_bound = UTILITY_MIDDLE_POINT + (UTILITY_RANGE * calibration_ratio)
+    if value_utility > utility_lower_bound and value_utility < utility_upper_bound:
         CURRENT_DEPTH = 3
     else:
         CURRENT_DEPTH = 2
@@ -497,7 +492,7 @@ output_f.close()
 #         longest_action = total_time_player_one
 #         longest_state_performed = board_dict
 #     # print("total current iteration player one " + str(end_time_player_one - start_time_player_one) + " seg")
-#     if total_time_player_one > 300:
+#     if total_time_player_one > 400:
 #         break
 #
 #     if terminal_test(s1):

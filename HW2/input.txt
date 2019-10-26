@@ -1,4 +1,4 @@
-GAME
+SINGLE
 WHITE
 100.0
 BBBBB...........

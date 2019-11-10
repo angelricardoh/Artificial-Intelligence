@@ -14,6 +14,7 @@ SINGLE_GAME = "SINGLE"
 UTILITY_MIDDLE_POINT = -206
 UTILITY_RANGE = 3.02
 
+
 def split(word):
     return list(word)
 
@@ -52,11 +53,12 @@ class Action():
         self.original_pos = original_pos
 
     def description(self):
-        description = "original pos: " + self.original_pos + " " + self.action_type.name + " "
+        description = self.action_type.name + " " + "original pos: " + self.original_pos + " "
         for move in self.moves:
             description += move + " "
         description = description[:-1]
         return description
+
 
 def get_enemy_corner(p):
     if p.color == PlayerColor.WHITE:
@@ -67,8 +69,21 @@ def get_enemy_corner(p):
                         '13,13', '12,14', '14,12', '11,15', '15,11', '12,13', '13,12', '11,14', '14,11']
     return enemy_corner
 
+def action_outside_own_camp(p, a):
+    if p.color == PlayerColor.WHITE:
+        own_corner = ['15,15', '14,15', '15,14', '14,14', '13,15', '15,13', '13,14', '14,13', '12,15', '15,12',
+                        '13,13', '12,14', '14,12', '11,15', '15,11', '12,13', '13,12', '11,14', '14,11']
+    else:
+        own_corner = ['0,0', '0,1', '1,0', '1,1', '0,2', '2,0', '2,1', '1,2', '0,3', '3,0', '2,2', '3,1', '1,3',
+                        '4,0', '0,4', '3,2', '2,3', '1,4', '4,1']
+
+    if a.moves[len(a.moves) - 1] not in own_corner:
+        return True
+    return False
+
+
 def actions(s, p):
-    actions = []
+    valid_actions = []
     pieces_in_camp = []
 
     if p.color == PlayerColor.WHITE:
@@ -151,7 +166,7 @@ def actions(s, p):
         for empty_space_pos in empty_space_array_check:
             if s.get(empty_space_pos) and s[empty_space_pos] == '.':
                 action = Action(ActionType.E, [empty_space_pos], piece_location)
-                actions.append(action)
+                valid_actions.append(action)
 
         # Check possible jumps
         jumps_queue = []
@@ -161,7 +176,7 @@ def actions(s, p):
         while jumps_queue or start_search:
             if not start_search:
                 current_action = jumps_queue.pop()
-                actions.append(current_action)
+                valid_actions.append(current_action)
 
             if current_action.moves:
                 # print("piece_pos_elements = " + current_action.moves[len(current_action.moves)-1])
@@ -204,20 +219,28 @@ def actions(s, p):
                     if possible_jump_pos not in current_action.moves and possible_jump_pos != current_action.original_pos:
                         # No outside enemy camp
                         enemy_corner = get_enemy_corner(p)
-                        if current_action.original_pos in get_enemy_corner(p) and not possible_jump_pos in get_enemy_corner(p):
-                             continue
+                        if current_action.original_pos in get_enemy_corner(
+                                p) and not possible_jump_pos in get_enemy_corner(p):
+                            continue
                         new_action = Action(current_action.action_type, current_action.moves.copy(),
                                             current_action.original_pos)
                         new_action.moves.append(possible_jump_pos)
                         jumps_queue.append(new_action)
 
         for action in jumps_queue:
-            actions.append(action)
+            valid_actions.append(action)
 
-    for action in actions:
-        print(action.description())
+        # if there are pieces in camp and can be moved outside then set them as priority
+        if len(pieces_in_camp) >= 1:
+            actions_outside_camp = []
+            for action in valid_actions:
+                if action_outside_own_camp(p, action):
+                    actions_outside_camp.append(action)
 
-    return actions
+            if actions_outside_camp:
+                return actions_outside_camp
+
+    return valid_actions
 
 
 # a: Action
@@ -345,6 +368,11 @@ def alpha_beta_search(state):
     next_actions = []  # type: List[Action]
     max_action = None
     value = max_value(state, float("-inf"), float("inf"), 0, next_actions)
+
+    # TODO: Comment this pair of lines before submission
+    # for action in next_actions:
+    #     print(action.description())
+
     for action in next_actions:
         if value == action.utility_value:
             if max_action:
@@ -413,7 +441,6 @@ for i in range(0, BOARD_SIZE):
         pos = pos = str(i) + ',' + str(j)
         board_dict[pos] = board_graph[j][i]
 
-
 # Calibration
 
 calibration_ratio = 0
@@ -447,7 +474,8 @@ else:
 
 # Output processing
 
-printState(board_dict)
+# TODO: Comment this line before submission
+# printState(board_dict)
 
 action_alphabeta = alpha_beta_search(board_dict)
 
@@ -457,18 +485,22 @@ if path.exists("output.txt"):
 output_f = open("output.txt", 'w')
 
 if action_alphabeta:
-    output_f.write(action_alphabeta.action_type.name + " " + action_alphabeta.original_pos + " " + action_alphabeta.moves[0])
-    print(action_alphabeta.action_type.name + " " + action_alphabeta.original_pos + " " + action_alphabeta.moves[0])
+    output_f.write(
+        action_alphabeta.action_type.name + " " + action_alphabeta.original_pos + " " + action_alphabeta.moves[0])
+    # TODO: Comment this line before submission
+    # print(action_alphabeta.action_type.name + " " + action_alphabeta.original_pos + " " + action_alphabeta.moves[0])
     if action_alphabeta.action_type.name == 'J':
         for i in range(0, len(action_alphabeta.moves) - 1):
             output_f.write('\n')
-            print(action_alphabeta.action_type.name + " " + action_alphabeta.moves[i] + " " + action_alphabeta.moves[i+1])
-            output_f.write(action_alphabeta.action_type.name + " " + action_alphabeta.moves[i] + " " + action_alphabeta.moves[i+1])
+            # TODO: Comment this line before submission
+            # print(action_alphabeta.action_type.name + " " + action_alphabeta.moves[i] + " " + action_alphabeta.moves[i + 1])
+            output_f.write(
+            action_alphabeta.action_type.name + " " + action_alphabeta.moves[i] + " " + action_alphabeta.moves[i + 1])
 
 output_f.close()
 
-printState(result(board_dict, action_alphabeta))
-
+# TODO: Comment this line before submission
+# printState(result(board_dict, action_alphabeta))
 
 ######################
 # Tests              #
@@ -499,7 +531,7 @@ printState(result(board_dict, action_alphabeta))
 #
 #     action_minimax = alpha_beta_search(board_dict)
 #     s1 = result(board_dict, action_minimax)
-#     # printState(s1)
+#     printState(s1)
 #
 #     end_time_player_one = timer()
 #     total_time_player_one += end_time_player_one - start_time_player_one
@@ -511,7 +543,7 @@ printState(result(board_dict, action_alphabeta))
 #         break
 #
 #     if terminal_test(s1):
-#         # printState(s1)
+#         printState(s1)
 #         print("total of iterations " + str(i))
 #         break
 #

@@ -3,6 +3,7 @@ from os import path
 from enum import Enum
 from timeit import default_timer as timer
 import math
+import copy
 
 # Global variables
 
@@ -57,6 +58,14 @@ class Action():
         description = description[:-1]
         return description
 
+def get_enemy_corner(p):
+    if p.color == PlayerColor.WHITE:
+        enemy_corner = ['0,0', '0,1', '1,0', '1,1', '0,2', '2,0', '2,1', '1,2', '0,3', '3,0', '2,2', '3,1', '1,3',
+                        '4,0', '0,4', '3,2', '2,3', '1,4', '4,1']
+    else:
+        enemy_corner = ['15,15', '14,15', '15,14', '14,14', '13,15', '15,13', '13,14', '14,13', '12,15', '15,12',
+                        '13,13', '12,14', '14,12', '11,15', '15,11', '12,13', '13,12', '11,14', '14,11']
+    return enemy_corner
 
 def actions(s, p):
     actions = []
@@ -102,12 +111,8 @@ def actions(s, p):
 
     if game != SINGLE_GAME:
         # Remove pieces already in enemy corner
-        if p.color == PlayerColor.WHITE:
-            enemy_corner = ['0,0', '0,1', '1,0', '1,1', '0,2', '2,0', '2,1', '1,2', '0,3', '3,0', '2,2', '3,1', '1,3',
-                            '4,0', '0,4', '3,2', '2,3', '1,4', '4,1']
-        else:
-            enemy_corner = ['15,15', '14,15', '15,14', '14,14', '13,15', '15,13', '13,14', '14,13', '12,15', '15,12',
-                            '13,13', '12,14', '14,12', '11,15', '15,11', '12,13', '13,12', '11,14', '14,11']
+        enemy_corner = get_enemy_corner(p)
+
         for i in range(0, len(enemy_corner) - 1):
             p.heuristic_point = enemy_corner[i]
             if enemy_corner[i] in player_movable_pieces:
@@ -197,6 +202,10 @@ def actions(s, p):
                 if s.get(possible_piece_pos) and s.get(possible_jump_pos) and s[possible_piece_pos] != '.' and s[
                     possible_jump_pos] == '.':
                     if possible_jump_pos not in current_action.moves and possible_jump_pos != current_action.original_pos:
+                        # No outside enemy camp
+                        enemy_corner = get_enemy_corner(p)
+                        if current_action.original_pos in get_enemy_corner(p) and not possible_jump_pos in get_enemy_corner(p):
+                             continue
                         new_action = Action(current_action.action_type, current_action.moves.copy(),
                                             current_action.original_pos)
                         new_action.moves.append(possible_jump_pos)
@@ -204,6 +213,9 @@ def actions(s, p):
 
         for action in jumps_queue:
             actions.append(action)
+
+    for action in actions:
+        print(action.description())
 
     return actions
 
@@ -435,6 +447,8 @@ else:
 
 # Output processing
 
+printState(board_dict)
+
 action_alphabeta = alpha_beta_search(board_dict)
 
 if path.exists("output.txt"):
@@ -444,16 +458,17 @@ output_f = open("output.txt", 'w')
 
 if action_alphabeta:
     output_f.write(action_alphabeta.action_type.name + " " + action_alphabeta.original_pos + " " + action_alphabeta.moves[0])
-    # print(action_alphabeta.action_type.name + " " + action_alphabeta.original_pos + " " + action_alphabeta.moves[0])
+    print(action_alphabeta.action_type.name + " " + action_alphabeta.original_pos + " " + action_alphabeta.moves[0])
     if action_alphabeta.action_type.name == 'J':
         for i in range(0, len(action_alphabeta.moves) - 1):
             output_f.write('\n')
-            # print(action_alphabeta.action_type.name + " " + action_alphabeta.moves[i] + " " + action_alphabeta.moves[i+1])
+            print(action_alphabeta.action_type.name + " " + action_alphabeta.moves[i] + " " + action_alphabeta.moves[i+1])
             output_f.write(action_alphabeta.action_type.name + " " + action_alphabeta.moves[i] + " " + action_alphabeta.moves[i+1])
 
 output_f.close()
 
-# printState(result(board_dict, action_alphabeta))
+printState(result(board_dict, action_alphabeta))
+
 
 ######################
 # Tests              #

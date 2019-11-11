@@ -12,7 +12,7 @@ CURRENT_DEPTH = MAX_DEPTH
 BOARD_SIZE = 16
 SINGLE_GAME = "SINGLE"
 UTILITY_MIDDLE_POINT = -206
-UTILITY_RANGE = 3.02
+UTILITY_RANGE = 5
 
 
 def split(word):
@@ -53,9 +53,11 @@ class Action():
         self.original_pos = original_pos
 
     def description(self):
-        description = self.action_type.name + " " + "original pos: " + self.original_pos + " "
+        description = self.action_type.name + " "
+        previous_move = self.original_pos
         for move in self.moves:
-            description += move + " "
+            description += previous_move + " " + move + "; "
+            previous_move = move
         description = description[:-1]
         return description
 
@@ -91,7 +93,7 @@ def actions(s, p):
     else:
         player_movable_pieces = [key for (key, value) in s.items() if value == 'B']
     if p.playerType == PlayerType.MAX:
-        player_movable_pieces.sort(reverse=True)
+        player_movable_pieces.sort(reverse=False)
 
     for piece_location in player_movable_pieces:
         piece_pos_elements = piece_location.split(',')
@@ -136,6 +138,8 @@ def actions(s, p):
             else:
                 break
 
+    enemy_corner = get_enemy_corner(p)
+
     # Iterate over pieces vs board
     for piece_location in player_movable_pieces:
         piece_pos_elements = piece_location.split(',')
@@ -165,6 +169,9 @@ def actions(s, p):
 
         for empty_space_pos in empty_space_array_check:
             if s.get(empty_space_pos) and s[empty_space_pos] == '.':
+                # No outside enemy camp
+                if piece_location in enemy_corner and not empty_space_pos in enemy_corner:
+                    continue
                 action = Action(ActionType.E, [empty_space_pos], piece_location)
                 valid_actions.append(action)
 
@@ -218,9 +225,7 @@ def actions(s, p):
                     possible_jump_pos] == '.':
                     if possible_jump_pos not in current_action.moves and possible_jump_pos != current_action.original_pos:
                         # No outside enemy camp
-                        enemy_corner = get_enemy_corner(p)
-                        if current_action.original_pos in get_enemy_corner(
-                                p) and not possible_jump_pos in get_enemy_corner(p):
+                        if current_action.original_pos in enemy_corner and not possible_jump_pos in enemy_corner:
                             continue
                         new_action = Action(current_action.action_type, current_action.moves.copy(),
                                             current_action.original_pos)
@@ -473,16 +478,16 @@ else:
         CURRENT_DEPTH = 2
 
 # Output processing
-
-# TODO: Comment this line before submission
-# printState(board_dict)
-
 action_alphabeta = alpha_beta_search(board_dict)
 
 if path.exists("output.txt"):
     os.remove("output.txt")
 
 output_f = open("output.txt", 'w')
+
+# # TODO: Comment this line before submission
+# print("s0")
+# printState(board_dict)
 
 if action_alphabeta:
     output_f.write(
@@ -500,6 +505,7 @@ if action_alphabeta:
 output_f.close()
 
 # TODO: Comment this line before submission
+# print("s1")
 # printState(result(board_dict, action_alphabeta))
 
 ######################
@@ -518,7 +524,7 @@ output_f.close()
 # longest_state_performed = None
 # while True:
 #     i += 1
-#     # print("Agent One iteration: " + str(i))
+#     print("Agent One iteration: " + str(i))
 #     start_time_player_one = timer()
 #
 #     value_utility = utility(board_dict)
@@ -538,7 +544,7 @@ output_f.close()
 #     if end_time_player_one - start_time_player_one > longest_action:
 #         longest_action = total_time_player_one
 #         longest_state_performed = board_dict
-#     # print("total current iteration player one " + str(end_time_player_one - start_time_player_one) + " seg")
+#     print("total current iteration player one " + str(end_time_player_one - start_time_player_one) + " seg")
 #     if total_time_player_one > 400:
 #         break
 #
@@ -554,7 +560,7 @@ output_f.close()
 #     MAX_player = Player(PlayerColor.BLACK, PlayerType.MAX)
 #     MIN_player = Player(PlayerColor.WHITE, PlayerType.MIN)
 #
-#     # print("Agent Two iteration: " + str(i))
+#     print("Agent Two iteration: " + str(i))
 #     start_time_player_two = timer()
 #
 #     value_utility = utility(s1)
@@ -565,11 +571,10 @@ output_f.close()
 #     s2 = result(s1, action_alphabeta)
 #
 #     if terminal_test(s2):
-#         # printState(s2)
+#         printState(s2)
 #         print("total of iterations " + str(i))
 #         break
 #
-#     # printState(s2)
 #     board_dict = s2
 #
 #     end_time_player_two = timer()

@@ -12,8 +12,8 @@ CURRENT_DEPTH = MAX_DEPTH
 BOARD_SIZE = 16
 SINGLE_GAME = "SINGLE"
 UTILITY_MIDDLE_POINT = -206
-UTILITY_RANGE = 5
-
+UTILITY_RANGE = 9
+TIME_CRITERIA = 243.1
 
 def split(word):
     return list(word)
@@ -62,6 +62,16 @@ class Action():
         return description
 
 
+def get_own_corner(p):
+    if p.color == PlayerColor.WHITE:
+        own_corner = ['15,15', '14,15', '15,14', '14,14', '13,15', '15,13', '13,14', '14,13', '12,15', '15,12',
+                        '13,13', '12,14', '14,12', '11,15', '15,11', '12,13', '13,12', '11,14', '14,11']
+    else:
+        own_corner = ['0,0', '0,1', '1,0', '1,1', '0,2', '2,0', '2,1', '1,2', '0,3', '3,0', '2,2', '3,1', '1,3',
+                        '4,0', '0,4', '3,2', '2,3', '1,4', '4,1']
+    return own_corner
+
+
 def get_enemy_corner(p):
     if p.color == PlayerColor.WHITE:
         enemy_corner = ['0,0', '0,1', '1,0', '1,1', '0,2', '2,0', '2,1', '1,2', '0,3', '3,0', '2,2', '3,1', '1,3',
@@ -70,6 +80,7 @@ def get_enemy_corner(p):
         enemy_corner = ['15,15', '14,15', '15,14', '14,14', '13,15', '15,13', '13,14', '14,13', '12,15', '15,12',
                         '13,13', '12,14', '14,12', '11,15', '15,11', '12,13', '13,12', '11,14', '14,11']
     return enemy_corner
+
 
 def action_outside_own_camp(p, a):
     if p.color == PlayerColor.WHITE:
@@ -92,7 +103,7 @@ def actions(s, p):
         player_movable_pieces = [key for (key, value) in s.items() if value == 'W']
     else:
         player_movable_pieces = [key for (key, value) in s.items() if value == 'B']
-    if p.playerType == PlayerType.MAX:
+    if p == MAX_player:
         player_movable_pieces.sort(reverse=False)
 
     for piece_location in player_movable_pieces:
@@ -107,6 +118,9 @@ def actions(s, p):
             if (x >= 11 and y == 15) or (x >= 11 and y >= 14) or (x >= 12 and y >= 13) or (x >= 13 and y >= 12) or (
                     x >= 14 and y >= 11):
                 pieces_in_camp.append(piece_location)
+
+    enemy_corner = get_enemy_corner(p)
+    own_corner = get_own_corner(p)
 
     # Only available pieces to move while their are in my camp
     valid_move_incamp = False
@@ -124,12 +138,10 @@ def actions(s, p):
                         s[str(x - 1) + ',' + str(y - 1)] == '.' or s[str(x) + ',' + str(y - 1)] == '.':
                     valid_move_incamp = True
         if valid_move_incamp:
-            player_movable_pieces = pieces_in_camp
+            player_movable_pieces = copy.deepcopy(pieces_in_camp)
 
     if game != SINGLE_GAME:
         # Remove pieces already in enemy corner
-        enemy_corner = get_enemy_corner(p)
-
         for i in range(0, len(enemy_corner) - 1):
             p.heuristic_point = enemy_corner[i]
             if enemy_corner[i] in player_movable_pieces:
@@ -137,8 +149,6 @@ def actions(s, p):
                 p.heuristic_point = enemy_corner[i + 1]
             else:
                 break
-
-    enemy_corner = get_enemy_corner(p)
 
     # Iterate over pieces vs board
     for piece_location in player_movable_pieces:
@@ -169,8 +179,10 @@ def actions(s, p):
 
         for empty_space_pos in empty_space_array_check:
             if s.get(empty_space_pos) and s[empty_space_pos] == '.':
-                # No outside enemy camp
+                # No outside enemy camp or inside own camp again
                 if piece_location in enemy_corner and not empty_space_pos in enemy_corner:
+                    continue
+                if piece_location not in own_corner and empty_space_pos in own_corner:
                     continue
                 action = Action(ActionType.E, [empty_space_pos], piece_location)
                 valid_actions.append(action)
@@ -224,8 +236,10 @@ def actions(s, p):
                 if s.get(possible_piece_pos) and s.get(possible_jump_pos) and s[possible_piece_pos] != '.' and s[
                     possible_jump_pos] == '.':
                     if possible_jump_pos not in current_action.moves and possible_jump_pos != current_action.original_pos:
-                        # No outside enemy camp
+                        # No outside enemy camp or inside own camp again
                         if current_action.original_pos in enemy_corner and not possible_jump_pos in enemy_corner:
+                            continue
+                        if current_action.original_pos not in own_corner and possible_jump_pos in own_corner:
                             continue
                         new_action = Action(current_action.action_type, current_action.moves.copy(),
                                             current_action.original_pos)
@@ -235,15 +249,15 @@ def actions(s, p):
         for action in jumps_queue:
             valid_actions.append(action)
 
-        # if there are pieces in camp and can be moved outside then set them as priority
-        if len(pieces_in_camp) >= 1:
-            actions_outside_camp = []
-            for action in valid_actions:
-                if action_outside_own_camp(p, action):
-                    actions_outside_camp.append(action)
+    # if there are pieces in camp and can be moved outside then set them as priority
+    if len(pieces_in_camp) >= 1:
+        actions_outside_camp = []
+        for action in valid_actions:
+            if action_outside_own_camp(p, action):
+                actions_outside_camp.append(action)
 
-            if actions_outside_camp:
-                return actions_outside_camp
+        if actions_outside_camp:
+            return actions_outside_camp
 
     return valid_actions
 
@@ -372,23 +386,20 @@ def min_value_minimax(state, d):
 def alpha_beta_search(state):
     next_actions = []  # type: List[Action]
     max_action = None
-    value = max_value(state, float("-inf"), float("inf"), 0, next_actions)
+    best_score = float("-inf")
 
-    # TODO: Comment this pair of lines before submission
-    # for action in next_actions:
-    #     print(action.description())
-
-    for action in next_actions:
-        if value == action.utility_value:
-            if max_action:
-                utility(result(state, action)) > utility(result(state, max_action))
-                max_action = action
-            else:
-                max_action = action
+    possible_actions = actions(state, MAX_player)
+    for action in possible_actions:
+        # # TODO: Comment this pair of lines before submission
+        # print(action.description())
+        utility_value = min_value(result(state, action), best_score, float("inf"), 1)
+        if utility_value > best_score:
+            best_score = utility_value
+            max_action = action
     return max_action
 
 
-def max_value(state, alpha, beta, depth, next_actions=None):
+def max_value(state, alpha, beta, depth):
     if terminal_test(state) or cutoff_test(depth):
         return utility(state)
     value = float("-inf")
@@ -396,9 +407,6 @@ def max_value(state, alpha, beta, depth, next_actions=None):
     for action in actions(state, MAX_player):
         utility_value = min_value(result(state, action), alpha, beta, depth + 1)
         value = max(value, utility_value)
-        if depth == 0:
-            action.utility_value = utility_value
-            next_actions.append(action)
         if value >= beta:
             return value
         alpha = max(alpha, value)
@@ -461,6 +469,7 @@ if path.exists("calibration.txt"):
 value_utility = utility(board_dict)
 utility_lower_bound = UTILITY_MIDDLE_POINT - UTILITY_RANGE
 utility_upper_bound = UTILITY_MIDDLE_POINT + UTILITY_RANGE
+time_criteria = TIME_CRITERIA
 
 # Depth designation
 
@@ -472,7 +481,8 @@ else:
         if calibration_ratio >= 1.0:
             utility_lower_bound = UTILITY_MIDDLE_POINT - (UTILITY_RANGE * calibration_ratio)
             utility_upper_bound = UTILITY_MIDDLE_POINT + (UTILITY_RANGE * calibration_ratio)
-    if value_utility > utility_lower_bound and value_utility < utility_upper_bound:
+            time_criteria = TIME_CRITERIA / calibration_ratio
+    if utility_lower_bound < value_utility < utility_upper_bound and time_criteria > time:
         CURRENT_DEPTH = 3
     else:
         CURRENT_DEPTH = 2
@@ -492,19 +502,19 @@ output_f = open("output.txt", 'w')
 if action_alphabeta:
     output_f.write(
         action_alphabeta.action_type.name + " " + action_alphabeta.original_pos + " " + action_alphabeta.moves[0])
-    # TODO: Comment this line before submission
+    # # TODO: Comment this line before submission
     # print(action_alphabeta.action_type.name + " " + action_alphabeta.original_pos + " " + action_alphabeta.moves[0])
     if action_alphabeta.action_type.name == 'J':
         for i in range(0, len(action_alphabeta.moves) - 1):
             output_f.write('\n')
-            # TODO: Comment this line before submission
+            # # TODO: Comment this line before submission
             # print(action_alphabeta.action_type.name + " " + action_alphabeta.moves[i] + " " + action_alphabeta.moves[i + 1])
             output_f.write(
             action_alphabeta.action_type.name + " " + action_alphabeta.moves[i] + " " + action_alphabeta.moves[i + 1])
 
 output_f.close()
 
-# TODO: Comment this line before submission
+# # TODO: Comment this line before submission
 # print("s1")
 # printState(result(board_dict, action_alphabeta))
 
@@ -524,29 +534,35 @@ output_f.close()
 # longest_state_performed = None
 # while True:
 #     i += 1
-#     print("Agent One iteration: " + str(i))
+#     # print("Agent One iteration: " + str(i))
 #     start_time_player_one = timer()
 #
 #     value_utility = utility(board_dict)
 #     # print(value_utility)
-#     if value_utility >= utility_lower_bound and value_utility <= utility_upper_bound:
-#         print("depth 3")
+#     if utility_lower_bound < value_utility < utility_upper_bound and time_criteria > time:
 #         CURRENT_DEPTH = 3
 #     else:
 #         CURRENT_DEPTH = 2
 #
+#     MAX_player = None
+#     MIN_player = None
+#     # MAX_player = Player(PlayerColor.BLACK, PlayerType.MAX)
+#     # MIN_player = Player(PlayerColor.WHITE, PlayerType.MIN)
+#     MAX_player = Player(PlayerColor.WHITE, PlayerType.MAX)
+#     MIN_player = Player(PlayerColor.BLACK, PlayerType.MIN)
+#
 #     action_minimax = alpha_beta_search(board_dict)
 #     s1 = result(board_dict, action_minimax)
-#     printState(s1)
+#     # printState(s1)
 #
 #     end_time_player_one = timer()
 #     total_time_player_one += end_time_player_one - start_time_player_one
 #     if end_time_player_one - start_time_player_one > longest_action:
 #         longest_action = total_time_player_one
 #         longest_state_performed = board_dict
-#     print("total current iteration player one " + str(end_time_player_one - start_time_player_one) + " seg")
-#     if total_time_player_one > 400:
-#         break
+#     # print("total current iteration player one " + str(end_time_player_one - start_time_player_one) + " seg")
+#     # if total_time_player_one > 320:
+#     #     break
 #
 #     if terminal_test(s1):
 #         printState(s1)
@@ -560,12 +576,12 @@ output_f.close()
 #     MAX_player = Player(PlayerColor.BLACK, PlayerType.MAX)
 #     MIN_player = Player(PlayerColor.WHITE, PlayerType.MIN)
 #
-#     print("Agent Two iteration: " + str(i))
+#     # print("Agent Two iteration: " + str(i))
 #     start_time_player_two = timer()
 #
 #     value_utility = utility(s1)
 #     # print(value_utility)
-#     CURRENT_DEPTH = 2
+#     CURRENT_DEPTH = 1
 #
 #     action_alphabeta = alpha_beta_search(s1)
 #     s2 = result(s1, action_alphabeta)
@@ -585,12 +601,6 @@ output_f.close()
 #
 #     # print("total current iteration player two " + str(end_time_player_two - start_time_player_two) + " seg")
 #
-#     MAX_player = None
-#     MIN_player = None
-#     # MAX_player = Player(PlayerColor.BLACK, PlayerType.MAX)
-#     # MIN_player = Player(PlayerColor.WHITE, PlayerType.MIN)
-#     MAX_player = Player(PlayerColor.WHITE, PlayerType.MAX)
-#     MIN_player = Player(PlayerColor.BLACK, PlayerType.MIN)
 # print("total play time player one " + str(total_time_player_one) + " seg")
 # print("longest action = " + str(longest_action))
 # print("longest state performed = ")

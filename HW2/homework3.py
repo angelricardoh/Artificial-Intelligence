@@ -3,7 +3,6 @@ from os import path
 from enum import Enum
 from timeit import default_timer as timer
 import math
-import copy
 
 # Global variables
 
@@ -103,8 +102,6 @@ def actions(s, p):
         player_movable_pieces = [key for (key, value) in s.items() if value == 'W']
     else:
         player_movable_pieces = [key for (key, value) in s.items() if value == 'B']
-    if p == MAX_player:
-        player_movable_pieces.sort(reverse=False)
 
     for piece_location in player_movable_pieces:
         piece_pos_elements = piece_location.split(',')
@@ -138,7 +135,7 @@ def actions(s, p):
                         s[str(x - 1) + ',' + str(y - 1)] == '.' or s[str(x) + ',' + str(y - 1)] == '.':
                     valid_move_incamp = True
         if valid_move_incamp:
-            player_movable_pieces = copy.deepcopy(pieces_in_camp)
+            player_movable_pieces = pieces_in_camp
 
     if game != SINGLE_GAME:
         # Remove pieces already in enemy corner
@@ -346,7 +343,7 @@ def utility(s):
 def printState(s):
     for i in range(0, BOARD_SIZE):
         for j in range(0, BOARD_SIZE):
-            print(s[str(j) + "," + str(i)], end='')
+            print(s[str(j) + "," + str(i)])
         print()
 
 

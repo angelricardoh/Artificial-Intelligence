@@ -1,14 +1,10 @@
-3
-Alert(Alice,VitE)
-Alert(Bob,VitE)
-Alert(John,VitE)
-9
-Migraine(x) & HighBP(x) => Take(x,Timolol)
-Take(x,Warfarin) & Take(x,Timolol) => Alert(x,VitE)
-Migraine(Alice)
-Migraine(Bob)
-HighBP(Bob)
-OldAge(John)
-HighBP(John)
-Take(John,Timolol)
-Take(Bob,Warfarin)
+1
+Kills(Curiosity,Tuna)
+7
+Animal(F(x)) | Loves(G(x),x)
+~Loves(x, F(x)) | Loves(G(x),x)
+~Loves(y,x) | ~Animal(z) | ~Kills(x,z)
+~Animal(x) | Loves(Jack,x)
+Kills(Jack, Tuna) | Kills(Curiosity,Tuna)
+Cat(Tuna)
+~Cat(x) | Animal(x)

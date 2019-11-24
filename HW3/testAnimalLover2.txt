@@ -1,0 +1,10 @@
+1
+Kills(Curiosity,Tuna)
+7
+Animal(v) | Loves(w,x)
+~Loves(x, v) | Loves(w,x)
+~Loves(y,x) | ~Animal(z) | ~Kills(x,z)
+~Animal(x) | Loves(Jack,x)
+Kills(Jack, Tuna) | Kills(Curiosity,Tuna)
+Cat(Tuna)
+~Cat(x) | Animal(x)

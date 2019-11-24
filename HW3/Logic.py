@@ -2,14 +2,17 @@ import os.path
 from os import path
 import collections
 import collections.abc
-from timeit import default_timer as timer
 
 
 class ComplexSentence:
-    def __init__(self, op, *args):
 
+    sentences_dict = {}
+    def __init__(self, op, *args):
         self.op = str(op)
         self.args = args
+        self.sentenceNumber = ComplexSentence.counter
+        ComplexSentence.sentences_dict[self.sentenceNumber] = self
+        ComplexSentence.counter += 1
 
     def __invert__(self):
         return ComplexSentence('~', self)
@@ -33,7 +36,7 @@ class ComplexSentence:
         return isinstance(other, ComplexSentence) and self.op == other.op and self.args == other.args
 
     def __hash__(self):
-        return hash(self.op) ^ hash(frozenset(self.args))
+        return hash(self.op) ^ hash(self.args)
 
     def __repr__(self):
         op = self.op
@@ -46,14 +49,6 @@ class ComplexSentence:
             opp = (' ' + op + ' ')
             return '(' + opp.join(args) + ')'
 
-
-def tuple_to_list(t):
-    list = []
-    if len(t) == 1:
-        list.append(t[0])
-    if len(t) == 2:
-        list.append(t[1])
-    return list
 
 def subexpressions(x):
     yield x
@@ -71,7 +66,6 @@ def arity(expression):
 
 class Sentence:
     def __init__(self, op, lhs):
-        # print("Sentence, op = " + op + " lhs = " + str(lhs))
         self.op, self.lhs = op, lhs
 
     def __or__(self, rhs):
@@ -81,9 +75,19 @@ class Sentence:
         return "Sentence('{}', {})".format(self.op, self.lhs)
 
 
+def Symbol(name):
+    return ComplexSentence(name)
+
+
 def expr(x):
     if isinstance(x, str):
-        y = SentencesDictionary(ComplexSentence)
+        # print(expr_handle_infix_ops(x))
+        # something = eval(expr_handle_infix_ops(x), DefaultKeyDict(ComplexSentence))
+        # print(type(something))
+        default_dict = {Symbol : {}}
+        # print(default_dict)
+        y = SentencesDictionary(Symbol)
+        # print(y)
         return eval(handle_implications_disjuncts(x), y)
     else:
         return x
@@ -108,6 +112,10 @@ def unique(seq):
     return list(set(seq))
 
 
+def is_sequence(x):
+    return isinstance(x, collections.abc.Sequence)
+
+
 def handle_implications_disjuncts(x):
     op = '=>'
     x = x.replace(op, '|' + repr(op) + '|')
@@ -120,31 +128,25 @@ class SentencesDictionary(collections.defaultdict):
         return result
 
 
+def is_symbol(s):
+    return isinstance(s, str) and s[:1].isalpha()
+
+
+def is_var_symbol(s):
+    return is_symbol(s) and s[0].islower()
+
+
 def variables(s):
-    return {x for x in subexpressions(s) if is_variable(x)}
+    return {x for x in subexpressions(s) if isvariable(x)}
 
 
 def convert_to_cnf(s):
     s = expr(s)
     if isinstance(s, str):
         s = expr(s)
-
-    # Eliminate implications
-
     s = eliminate_implications(s)
-
-    # Move negation inwards
-
-    s = move_negation_inwards_rec(s)
-
-    # Stardardize variables
-
-    # s = standardize_variables_rec(s)
-
-    # Distribute disjunctions over conjunctions
-
-    s = distribute_rec(s)
-    return s
+    s = move_not_inwards(s)
+    return distribute_and_over_or(s)
 
 
 def eliminate_implications(s):
@@ -155,17 +157,65 @@ def eliminate_implications(s):
     a, b = args[0], args[-1]
     if s.op == '=>':
         return b | ~a
+    elif s.op == '<=':
+        return a | ~b
+    elif s.op == '<=>':
+        return (a | ~b) & (b | ~a)
+    elif s.op == '^':
+        assert len(args) == 2  # TODO: relax this restriction
+        return (a & ~b) | (~a & b)
     else:
         assert s.op in ('&', '|', '~')
         return ComplexSentence(s.op, *args)
 
 
+def move_not_inwards(s):
+    s = expr(s)
+    if s.op == '~':
+        def NOT(b):
+            return move_not_inwards(~b)
+
+        a = s.args[0]
+        if a.op == '~':
+            return move_not_inwards(a.args[0])  # ~~A ==> A
+        if a.op == '&':
+            return join_terms('|', list(map(NOT, a.args)))
+        if a.op == '|':
+            return join_terms('&', list(map(NOT, a.args)))
+        return s
+    elif is_symbol(s.op) or not s.args:
+        return s
+    else:
+        return ComplexSentence(s.op, *list(map(move_not_inwards, s.args)))
+
+
+def distribute_and_over_or(s):
+    s = expr(s)
+    if s.op == '|':
+        s = join_terms('|', s.args)
+        if s.op != '|':
+            return distribute_and_over_or(s)
+        if len(s.args) == 0:
+            return False
+        if len(s.args) == 1:
+            return distribute_and_over_or(s.args[0])
+        conj = first(arg for arg in s.args if arg.op == '&')
+        if not conj:
+            return s
+        others = [a for a in s.args if a is not conj]
+        rest = join_terms('|', others)
+        return join_terms('&', [distribute_and_over_or(c | rest)
+                               for c in conj.args])
+    elif s.op == '&':
+        return join_terms('&', list(map(distribute_and_over_or, s.args)))
+    else:
+        return s
+
+
 def NOT(b):
     return move_negation_inwards_rec(~b)
 
-
 def move_negation_inwards_rec(s):
-    s = expr(s)
     if s.op == '~':
         a = s.args[0]
         if a.op == '~':
@@ -179,23 +229,6 @@ def move_negation_inwards_rec(s):
         return s
     else:
         return ComplexSentence(s.op, *list(map(move_negation_inwards_rec, s.args)))
-
-
-def standardize_variables_rec(sentence, dic=None):
-    if dic is None:
-        dic = {}
-    if not isinstance(sentence, ComplexSentence):
-        return sentence
-    elif is_var_symbol(sentence.op):
-        if sentence in dic:
-            return dic[sentence]
-        else:
-            standardize_variables_rec.counter += 1
-            v = ComplexSentence('v_' + str(standardize_variables_rec.counter))
-            dic[sentence] = v
-            return v
-    else:
-        return ComplexSentence(sentence.op, *[standardize_variables_rec(a, dic) for a in sentence.args])
 
 
 def distribute_rec(s):
@@ -221,6 +254,7 @@ def distribute_rec(s):
         return s
 
 
+
 def join_terms(op, args):
     args = disjoint_terms(op, args)
     if len(args) == 0:
@@ -239,12 +273,14 @@ def disjoint_terms(op, args):
 
     def collect(subargs):
         for arg in subargs:
-            if arg.op == op:
+            if arg is not None and arg.op == op:
                 collect(arg.args)
             else:
                 result.append(arg)
 
+
     collect(args)
+
     return result
 
 
@@ -261,15 +297,15 @@ def unify(x, y, theta={}):
         return None
     elif x == y:
         return theta
-    elif is_variable(x):
+    elif isvariable(x):
         return unify_var(x, y, theta)
-    elif is_variable(y):
+    elif isvariable(y):
         return unify_var(y, x, theta)
-    elif is_compound(x) and is_compound(y):
+    elif iscompound(x) and iscompound(y):
         return unify(x.args, y.args, unify(x.op, y.op, theta))
     elif isinstance(x, str) or isinstance(y, str):
         return None
-    elif is_list(x) and is_list(y):
+    elif is_sequence(x) and is_sequence(y):
         if not x:
             return theta
         return unify(x[1:], y[1:], unify(x[0], y[0], theta))
@@ -277,28 +313,16 @@ def unify(x, y, theta={}):
         return None
 
 
-def is_variable(x):
+def isvariable(x):
     return isinstance(x, ComplexSentence) and not x.args and x.op[0].islower()
 
 
-def is_compound(x):
+def iscompound(x):
     return isinstance(x, ComplexSentence)
 
 
-def is_list(x):
-    return isinstance(x, list) or isinstance(x, tuple)
-
-
-def is_sequence(x):
-    return isinstance(x, collections.abc.Sequence)
-
-
-def is_symbol(s):
-    return isinstance(s, str) and s[:1].isalpha()
-
-
-def is_var_symbol(s):
-    return is_symbol(s) and s[0].islower()
+def islist(x):
+    return isinstance(x, list)
 
 
 def unify_var(var, x, theta):
@@ -322,12 +346,12 @@ def add(theta, var, x):
 def occur_check(var, x, s):
     if var == x:
         return True
-    elif is_variable(x) and x in s:
+    elif isvariable(x) and x in s:
         return occur_check(var, s[x], s)
     elif isinstance(x, ComplexSentence):
         return (occur_check(var, x.op, s) or
                 occur_check(var, x.args, s))
-    elif isinstance(x, (list, tuple)):
+    elif isinstance(x, list):
         return first(e for e in x if occur_check(var, e, s))
     else:
         return False
@@ -336,8 +360,6 @@ def occur_check(var, x, s):
 def subst(s, x):
     if isinstance(x, list):
         return [subst(s, xi) for xi in x]
-    elif isinstance(x, tuple):
-        return tuple([subst(s, xi) for xi in x])
     elif not isinstance(x, ComplexSentence):
         return x
     elif is_var_symbol(x.op):
@@ -350,9 +372,26 @@ def subst(s, x):
 def subst_rec(s):
     for x in s:
         s[x] = subst(s, s.get(x))
-        if isinstance(s.get(x), ComplexSentence) and not is_variable(s.get(x)):
+        if isinstance(s.get(x), ComplexSentence) and not isvariable(s.get(x)):
             # print(type(subst(s.get(x, x))))
             s[x] = subst(s, s.get(x))
+
+
+def standardize_variables(sentence, dic=None):
+    if dic is None:
+        dic = {}
+    if not isinstance(sentence, ComplexSentence):
+        return sentence
+    elif is_var_symbol(sentence.op):
+        if sentence in dic:
+            return dic[sentence]
+        else:
+            standardize_variables.counter += 1
+            v = ComplexSentence('v_' + str(standardize_variables.counter))
+            dic[sentence] = v
+            return v
+    else:
+        return ComplexSentence(sentence.op, *[standardize_variables(a, dic) for a in sentence.args])
 
 
 class KB:
@@ -372,16 +411,11 @@ class KB:
 def pl_resolution(kb, alpha):
     cnf_clauses = []
     for clause in kb.clauses:
-        # clause = standardize_variables_rec(clause)
         cnf_clauses.append(convert_to_cnf(clause))
-        # print(convert_to_cnf(clause))
     clauses = cnf_clauses + enum_conjunctions(convert_to_cnf(~alpha))
     new = set()
     while True:
         n = len(clauses)
-        print(n)
-        # for c in clauses:
-        #     print(c)
         pairs = [(clauses[i], clauses[j])
                  for i in range(n) for j in range(i + 1, n)]
         for (ci, cj) in pairs:
@@ -396,60 +430,40 @@ def pl_resolution(kb, alpha):
                 clauses.append(c)
 
 
-
 def pl_resolve(ci, cj):
     clauses = []
-    # print("ci = " + str(ci))
-    # print("cj = " + str(cj))
     for di in enum_disjunctions(ci):
         for dj in enum_disjunctions(cj):
             cnf_dj_inverse = convert_to_cnf(~dj)
-            # print("di = " + str(di))
-            # print("~dj = " + str(cnf_dj_inverse))
             phi = unify(di, cnf_dj_inverse)
             if phi or di == cnf_dj_inverse:
-                new_clause = join_terms('|', unique(remove_all(di, enum_disjunctions(ci))) +
-                                        remove_all(dj, enum_disjunctions(cj)))
+                new_clause = join_terms('|', unique(remove_all(di, enum_disjunctions(ci))) + remove_all(dj, enum_disjunctions(cj)))
                 norm_clause = subst(phi, new_clause)
-                # print("norm clause = ", str(norm_clause))
                 clauses.append(norm_clause)
     return clauses
 
 
 # Global variables
-standardize_variables_rec.counter = 0
+ComplexSentence.counter = 0
 
+# Main program
+kb1 = KB([expr('Take(x,Warfarin) => ~Take(x,NSAIDs)'), expr('Take(Alice,Warfarin)')])
+print(kb1.ask_if_true(expr('Take(Alice,NSAIDs)')))
 
-def main():
-    start_time = timer()
-    input_f = open("input.txt", "r")
-    number_of_queries = int(input_f.readline().rstrip())
-    queries = []
-    for i in range(number_of_queries):
-        queries.append(expr(input_f.readline().rstrip()))
-    number_of_sentences = int(input_f.readline().rstrip())
-    sentences = []
-    for i in range(number_of_sentences):
-        sentences.append(expr(input_f.readline().rstrip()))
+kb2 = KB([expr('Take(x,Warfarin) => ~Take(x,NSAIDs)'), expr('HighBP(x) => Alert(x,NSAIDs)'),
+          expr('Take(Bob,Antacids)'), expr('Take(Bob,VitA)'), expr('HighBP(Bob)')])
+print("\n")
 
-    kb = KB(sentences)
-    results = []
-    for query in queries:
-        results.append(kb.ask_if_true(query))
+print(kb2.ask_if_true(expr('Alert(Bob,NSAIDs)')))
+print(kb2.ask_if_true(expr('Alert(Bob,VitC)')))
 
-    if path.exists("output.txt"):
-        os.remove("output.txt")
+kb3 = KB(
+    [expr('Migraine(x) & HighBP(x) => Take(x,Timolol)'), expr('Take(x,Warfarin) & Take(x,Timolol) => Alert(x,VitE)'),
+     expr('Migraine(Alice)'), expr('Migraine(Bob)'), expr('HighBP(Bob)'), expr('OldAge(John)'), expr('HighBP(John)'),
+     expr('Take(John,Timolol)'), expr('Take(Bob,Warfarin)')])
 
-    output_f = open("output.txt", 'w')
-    for i in range(0, len(results)):
-        output_f.write(str(results[i]).upper())
-        print(results[i])
-        if i != len(results) - 1:
-            output_f.write("\n")
-    output_f.close()
-    end_time = timer()
-    print("total current iteration player one " + str(end_time - start_time) + " seg")
+print("\n")
 
-
-if __name__ == '__main__':
-    main()
+print(kb3.ask_if_true(expr('Alert(Alice,VitE)')))
+print(kb3.ask_if_true(expr('Alert(Bob,VitE)')))
+print(kb3.ask_if_true(expr('Alert(John,VitE)')))

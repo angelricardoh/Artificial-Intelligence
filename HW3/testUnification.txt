@@ -1,0 +1,5 @@
+1
+Knows(John,Elizabeth)
+2
+Knows(John,x)
+Knows(x,Elizabeth)

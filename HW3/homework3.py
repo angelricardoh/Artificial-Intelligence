@@ -3,16 +3,24 @@ from os import path
 import collections
 import collections.abc
 from timeit import default_timer as timer
+import copy
 
 
 class ComplexSentence:
     def __init__(self, op, *args):
-
         self.op = str(op)
+        # print("type:" + str(type(args)))
+        # if len(args) == 1:
+        #     print("type args[0]:" + str(type(args[0])))
+        # if len(args) == 2:
+        #     print("type args[1]:" + str(type(args[1])))
         self.args = args
 
     def __invert__(self):
         return ComplexSentence('~', self)
+
+    def __add__(self, rhs):
+        return ComplexSentence('+', self, rhs)
 
     def __and__(self, rhs):
         return ComplexSentence('&', self, rhs)
@@ -32,28 +40,23 @@ class ComplexSentence:
     def __eq__(self, other):
         return isinstance(other, ComplexSentence) and self.op == other.op and self.args == other.args
 
+    def __equalOp__(self, other):
+        return isinstance(other, ComplexSentence) and self.op == other.op
+
     def __hash__(self):
-        return hash(self.op) ^ hash(frozenset(self.args))
+        return hash(self.op) ^ hash(self.args)
 
-    def __repr__(self):
-        op = self.op
-        args = [str(arg) for arg in self.args]
-        if op.isidentifier():  # f(x) or f(x, y)
-            return '{}({})'.format(op, ', '.join(args)) if args else op
-        elif len(args) == 1:  # -x or -(x + 1)
-            return op + args[0]
-        else:  # (x - y)
-            opp = (' ' + op + ' ')
-            return '(' + opp.join(args) + ')'
+    # def __repr__(self):
+    #     op = self.op
+    #     args = [str(arg) for arg in self.args]
+    #     if op.isidentifier():
+    #         return '{}({})'.format(op, ', '.join(args)) if args else op
+    #     elif len(args) == 1:
+    #         return op + args[0]
+    #     else:
+    #         opp = (' ' + op + ' ')
+    #         return '(' + opp.join(args) + ')'
 
-
-def tuple_to_list(t):
-    list = []
-    if len(t) == 1:
-        list.append(t[0])
-    if len(t) == 2:
-        list.append(t[1])
-    return list
 
 def subexpressions(x):
     yield x
@@ -69,9 +72,16 @@ def arity(expression):
         return 0
 
 
+def Symbol(name):
+    return ComplexSentence(name)
+
+
+def symbols(names):
+    return tuple(Symbol(name) for name in names.replace(',', ' ').split())
+
+
 class Sentence:
     def __init__(self, op, lhs):
-        # print("Sentence, op = " + op + " lhs = " + str(lhs))
         self.op, self.lhs = op, lhs
 
     def __or__(self, rhs):
@@ -83,7 +93,7 @@ class Sentence:
 
 def expr(x):
     if isinstance(x, str):
-        y = SentencesDictionary(ComplexSentence)
+        y = SentencesDictionary(Symbol)
         return eval(handle_implications_disjuncts(x), y)
     else:
         return x
@@ -144,6 +154,7 @@ def convert_to_cnf(s):
     # Distribute disjunctions over conjunctions
 
     s = distribute_rec(s)
+
     return s
 
 
@@ -257,7 +268,7 @@ def enum_disjunctions(s):
 
 
 def unify(x, y, theta={}):
-    if theta is None or theta == '':
+    if theta is None:
         return None
     elif x == y:
         return theta
@@ -269,7 +280,7 @@ def unify(x, y, theta={}):
         return unify(x.args, y.args, unify(x.op, y.op, theta))
     elif isinstance(x, str) or isinstance(y, str):
         return None
-    elif is_list(x) and is_list(y):
+    elif is_sequence(x) and is_sequence(y) and len(x) == len(y):
         if not x:
             return theta
         return unify(x[1:], y[1:], unify(x[0], y[0], theta))
@@ -341,7 +352,6 @@ def subst(s, x):
     elif not isinstance(x, ComplexSentence):
         return x
     elif is_var_symbol(x.op):
-        # print(type(s.get(x, x)))
         return s.get(x, x)
     else:
         return ComplexSentence(x.op, *[subst(s, arg) for arg in x.args])
@@ -351,7 +361,6 @@ def subst_rec(s):
     for x in s:
         s[x] = subst(s, s.get(x))
         if isinstance(s.get(x), ComplexSentence) and not is_variable(s.get(x)):
-            # print(type(subst(s.get(x, x))))
             s[x] = subst(s, s.get(x))
 
 
@@ -369,51 +378,147 @@ class KB:
         return pl_resolution(self, query)
 
 
+# def pl_resolution(kb, alpha):
+#     cnf_clauses = []
+#     # subexpression_n = 0
+#     for clause in kb.clauses:
+#         clause = standardize_variables_rec(clause)
+#         clause = convert_to_cnf(clause)
+#         # for exp in subexpressions(clause):
+#         #     print(exp)
+#         #     subexpression_n += 1
+#         # print(subexpression_n)
+#         cnf_clauses.append(clause)
+#         # print(convert_to_cnf(clause))
+#     clauses = cnf_clauses + enum_conjunctions(convert_to_cnf(~alpha))
+#     new = set()
+#     iterations = 1
+#     while True:
+#         n = len(clauses)
+#         # print(n)
+#         # for c in clauses:
+#         #     print(c)
+#
+#         pairs = [(clauses[i], clauses[j])
+#                  for i in range(n) for j in range(i + 1, n)]
+#         for (ci, cj) in pairs:
+#             resolvents = pl_resolve(ci, cj)
+#             if False in resolvents:
+#                 return True
+#             new = new.union(set(resolvents))
+#             # print(len(new) + len(clauses))
+#
+#
+#         if new.issubset(set(clauses)):
+#             return False
+#         for c in new:
+#             if c not in clauses:
+#                 clauses.append(c)
+#
+#
+# def pl_resolve(ci, cj):
+#     clauses = []
+#     # print("ci = ", ci)
+#     # print("cj = ", cj)
+#     for di in enum_disjunctions(ci):
+#         for dj in enum_disjunctions(cj):
+#             # print("di = ", di)
+#             # print("dj = ", to_cnf(~dj))
+#             original_di = di
+#             original_dj = dj
+#             # print("origin_di " + str(original_di))
+#             # print("original_dj " + str(original_dj))
+#             di_neg = False
+#             dj_neg = False
+#             if di.op == '~':
+#                 di = (convert_to_cnf(~di))
+#                 di_neg = True
+#             if dj.op == '~':
+#                 dj = (convert_to_cnf(~dj))
+#                 dj_neg = True
+#
+#             if di.__equalOp__(dj) and (di_neg != dj_neg):
+#                 phi = unify(original_di, convert_to_cnf(~original_dj))
+#                 if phi is not None:
+#                     new_clause = join_terms('|',
+#                                             unique(remove_all(original_di, enum_disjunctions(ci))) + remove_all(
+#                                                 original_dj,
+#                                                 enum_disjunctions(
+#                                                     cj)))
+#                     resolvent = subst(phi, new_clause)
+#                     resolvent = factorize(resolvent)
+#                     print(resolvent)
+#                     if resolvent not in clauses:
+#                         clauses.append(resolvent)
+#     return clauses
+
+
 def pl_resolution(kb, alpha):
     cnf_clauses = []
     for clause in kb.clauses:
-        # clause = standardize_variables_rec(clause)
-        cnf_clauses.append(convert_to_cnf(clause))
-        # print(convert_to_cnf(clause))
-    clauses = cnf_clauses + enum_conjunctions(convert_to_cnf(~alpha))
-    new = set()
-    while True:
-        n = len(clauses)
-        print(n)
-        # for c in clauses:
-        #     print(c)
-        pairs = [(clauses[i], clauses[j])
-                 for i in range(n) for j in range(i + 1, n)]
-        for (ci, cj) in pairs:
-            resolvents = pl_resolve(ci, cj)
-            if False in resolvents:
-                return True
-            new = new.union(set(resolvents))
-        if new.issubset(set(clauses)):
-            return False
-        for c in new:
-            if c not in clauses:
-                clauses.append(c)
+        clause = standardize_variables_rec(clause)
+        clause = convert_to_cnf(clause)
+        cnf_clauses.append(clause)
+    frontier = []
+    loop_detector = []
+    frontier.append(convert_to_cnf(~alpha))
+    loop_detector.append(convert_to_cnf(~alpha))
+    while frontier:
+        current_sentence = frontier.pop()
+        for clause in cnf_clauses:
+            ci = current_sentence
+            cj = clause
+            # print("ci: " + str(ci))
+            # print("cj: " + str(cj))
+            for di in enum_disjunctions(ci):
+                for dj in enum_disjunctions(cj):
+                    unsigned_di = copy.deepcopy(di)
+                    unsigned_dj = copy.deepcopy(dj)
+                    di_neg = False
+                    dj_neg = False
+                    if di.op == '~':
+                        unsigned_di = (convert_to_cnf(~di))
+                        di_neg = True
+                    if dj.op == '~':
+                        unsigned_dj = (convert_to_cnf(~dj))
+                        dj_neg = True
+
+                    # print("original_di: " + str(di) + " original_dj: " + str(dj))
+                    if unsigned_di.__equalOp__(unsigned_dj) and (di_neg != dj_neg):
+                        phi = unify(di, convert_to_cnf(~dj))
+                        if phi is not None:
+                            new_clause = join_terms('|', unique(remove_all(di, enum_disjunctions(ci))) + remove_all(dj,
+                                                        enum_disjunctions(cj)))
+                            resolvent = subst(phi, new_clause)
+                            if resolvent is False:
+                                return True
+                            resolvent = factorize(resolvent)
+                            if resolvent not in loop_detector:
+                                # print(resolvent)
+                                frontier.append(resolvent)
+                                loop_detector.append(resolvent)
+    return False
 
 
-
-def pl_resolve(ci, cj):
-    clauses = []
-    # print("ci = " + str(ci))
-    # print("cj = " + str(cj))
-    for di in enum_disjunctions(ci):
-        for dj in enum_disjunctions(cj):
-            cnf_dj_inverse = convert_to_cnf(~dj)
-            # print("di = " + str(di))
-            # print("~dj = " + str(cnf_dj_inverse))
-            phi = unify(di, cnf_dj_inverse)
-            if phi or di == cnf_dj_inverse:
-                new_clause = join_terms('|', unique(remove_all(di, enum_disjunctions(ci))) +
-                                        remove_all(dj, enum_disjunctions(cj)))
-                norm_clause = subst(phi, new_clause)
-                # print("norm clause = ", str(norm_clause))
-                clauses.append(norm_clause)
-    return clauses
+def factorize(s):
+    ci = s
+    # print("s + ", s)
+    di = enum_disjunctions(s)
+    mod_ci = ci
+    visited = []
+    # print("di + " + str(di))
+    for i in range(0, len(di)):
+        for j in range(i + 1, len(di)):
+            if di[i] == di[j] and di[i] not in visited:
+                visited.append(di[i])
+    # print("visited + " + str(visited))
+    for i in range(0, len(visited)):
+        # print("visited " + str(i) + " : " + str(visited[i]))
+        # print(unique(remove_all(visited[i], enum_disjunctions(mod_ci))))
+        unique_items = unique(remove_all(visited[i], enum_disjunctions(mod_ci)))
+        unique_items.append(visited[i])
+        mod_ci = join_terms('|', unique_items)
+    return mod_ci
 
 
 # Global variables
@@ -443,12 +548,15 @@ def main():
     output_f = open("output.txt", 'w')
     for i in range(0, len(results)):
         output_f.write(str(results[i]).upper())
-        print(results[i])
         if i != len(results) - 1:
             output_f.write("\n")
     output_f.close()
     end_time = timer()
-    print("total current iteration player one " + str(end_time - start_time) + " seg")
+
+    # Comment before submitting
+    # for result in results:
+    #     print(result)
+    # print("total current logic iteration " + str(end_time - start_time) + " seg")
 
 
 if __name__ == '__main__':

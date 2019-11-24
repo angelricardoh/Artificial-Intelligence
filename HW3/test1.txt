@@ -1,11 +1,5 @@
 1
-Criminal(West)
-8
-~American(x) | ~Weapon(y) | ~Sells(x,y,z) | ~Hostile(z) | Criminal(x)
-~Missile(x) | ~Owns(Nono,x) | Sells(West,x,Nono)
-~Enemy(x,America) | Hostile(x)
-~Missile(x) | Weapon(x)
-Owns(Nono,m1)
-American(West)
-Missile(m1)
-Enemy(Nono,America)
+Take(Alice,NSAIDs)
+2
+Take(x,Warfarin) => ~Take(x,NSAIDs)
+Take(Alice,Warfarin)

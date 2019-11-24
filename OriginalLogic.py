@@ -371,7 +371,7 @@ def pl_resolve(ci, cj):
             # print("di = ", di)
             # print("dj = ", to_cnf(~dj))
             phi = unify(di, to_cnf(~dj))
-            if phi or di == to_cnf(~dj):
+            if phi is not None or di == to_cnf(~dj):
                 new_clause = associate('|', unique(remove_all(di, disjuncts(ci))) + remove_all(dj, disjuncts(cj)))
                 norm_clause = subst(phi, new_clause)
                 clauses.append(norm_clause)

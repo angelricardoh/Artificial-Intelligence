@@ -1,8 +1,8 @@
 1
 Kills(Curiosity,Tuna)
 7
-Animal(F(x)) | Loves(G(x),x)
-~Loves(x, F(x)) | Loves(G(x),x)
+Animal(v) | Loves(w,x)
+~Loves(x, v) | Loves(w,x)
 ~Loves(y,x) | ~Animal(z) | ~Kills(x,z)
 ~Animal(x) | Loves(Jack,x)
 Kills(Jack, Tuna) | Kills(Curiosity,Tuna)

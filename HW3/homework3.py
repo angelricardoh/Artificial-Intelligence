@@ -6,7 +6,14 @@ from timeit import default_timer as timer
 import copy
 
 
+# Global variables
+ZERO = 0
+ONE = 1
+MAX_TIME_PER_QUERY = 40
+
+
 def resolution(kb, alpha):
+    start_time = timer()
     frontier = []
     loop_detector = []
     frontier.append(convert_to_cnf(~alpha))
@@ -39,16 +46,17 @@ def resolution(kb, alpha):
                                                                                                                     enum_disjunctions(
                                                                                                                         cj)))
                             resolvent = subst(phi, new_clause)
+                            # print(len(loop_detector))
                             if resolvent is False:
-                                print(len(loop_detector))
                                 return True
                             resolvent = factorize(resolvent)
                             if resolvent not in loop_detector:
                                 # print(resolvent)
                                 frontier.append(resolvent)
                                 loop_detector.append(resolvent)
-                                if len(frontier) > MAX_SENTENCE_CAPACITY:
-                                    return False
+        elapsed_time = timer()
+        # if (elapsed_time - start_time) > MAX_TIME_PER_QUERY:
+        #     return False
     print(len(loop_detector))
     return False
 
@@ -433,11 +441,7 @@ class ComplexSentence:
     #         return '(' + opp.join(argumentList) + ')'
 
 
-# Global variables
 standardize_variables_rec.counter = 0
-ZERO = 0
-ONE = 1
-MAX_SENTENCE_CAPACITY = 15000
 
 
 def main():

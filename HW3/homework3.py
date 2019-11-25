@@ -10,55 +10,72 @@ import copy
 ZERO = 0
 ONE = 1
 MAX_TIME_PER_QUERY = 40
+MAX_TIME_PER_QUERY_FULL_RESOLUTION = 120
 
 
-def resolution(kb, alpha):
-    start_time = timer()
-    frontier = []
-    loop_detector = []
-    frontier.append(convert_to_cnf(~alpha))
-    loop_detector.append(convert_to_cnf(~alpha))
-    while frontier:
-        current_sentence = frontier.pop()
-        for clause in kb.clauses:
-            ci = current_sentence
-            cj = clause
-            # print("ci: " + str(ci))
-            # print("cj: " + str(cj))
-            for di in enum_disjunctions(ci):
-                for dj in enum_disjunctions(cj):
-                    unsigned_di = copy.deepcopy(di)
-                    unsigned_dj = copy.deepcopy(dj)
-                    di_neg = False
-                    dj_neg = False
-                    if di.operator == '~':
-                        unsigned_di = (convert_to_cnf(~di))
-                        di_neg = True
-                    if dj.operator == '~':
-                        unsigned_dj = (convert_to_cnf(~dj))
-                        dj_neg = True
+class ComplexSentence:
+    sentenceId = 0
 
-                    # print("original_di: " + str(di) + " original_dj: " + str(dj))
-                    if unsigned_di.__equalOp__(unsigned_dj) and (di_neg != dj_neg):
-                        phi = unify(di, convert_to_cnf(~dj))
-                        if phi is not None:
-                            new_clause = join_terms('|', unique(remove_all(di, enum_disjunctions(ci))) + remove_all(dj,
-                                                                                                                    enum_disjunctions(
-                                                                                                                        cj)))
-                            resolvent = subst(phi, new_clause)
-                            # print(len(loop_detector))
-                            if resolvent is False:
-                                return True
-                            resolvent = factorize(resolvent)
-                            if resolvent not in loop_detector:
-                                # print(resolvent)
-                                frontier.append(resolvent)
-                                loop_detector.append(resolvent)
-        elapsed_time = timer()
-        # if (elapsed_time - start_time) > MAX_TIME_PER_QUERY:
-        #     return False
-    print(len(loop_detector))
-    return False
+    def __init__(self, operator, *arguments):
+        self.operator = str(operator)
+        # print("type:" + str(type(argumentList)))
+        # if len(argumentList) == 1:
+        #     print("type argumentList[0]:" + str(type(argumentList[0])))
+        # if len(argumentList) == 2:
+        #     print("type argumentList[1]:" + str(type(argumentList[1])))
+        self.argumentList = arguments
+
+    def __invert__(self):
+        return ComplexSentence('~', self)
+
+    def __add__(self, rightNode):
+        return ComplexSentence('+', self, rightNode)
+
+    def __and__(self, rightNode):
+        return ComplexSentence('&', self, rightNode)
+
+    def __or__(self, rightNode):
+        class Sentence:
+            def __init__(self, op, leftNode):
+                self.op, self.leftNode = op, leftNode
+
+            def __or__(self, rightInnerNode):
+                return ComplexSentence(self.op, self.leftNode, rightInnerNode)
+
+            # def __repr__(self):
+            #     return "Sentence('{}', {})".format(self.op, self.lhs)
+
+        if isinstance(rightNode, ComplexSentence):
+            return ComplexSentence('|', self, rightNode)
+        else:
+            return Sentence(rightNode, self)
+
+    def __call__(self, *argumentList):
+        if self.argumentList:
+            print("Error element should not contain argumentList")
+        else:
+            return ComplexSentence(self.operator, *argumentList)
+
+    def __eq__(self, other):
+        return isinstance(other,
+                          ComplexSentence) and self.operator == other.operator and self.argumentList == other.argumentList
+
+    def __equalOp__(self, other):
+        return isinstance(other, ComplexSentence) and self.operator == other.operator
+
+    def __hash__(self):
+        return hash(self.operator) % hash(self.argumentList)
+
+    # def __repr__(self):
+    #     op = self.operator
+    #     argumentList = [str(arg) for arg in self.argumentList]
+    #     if op.isidentifier():
+    #         return '{}({})'.format(op, ', '.join(argumentList)) if argumentList else op
+    #     elif len(argumentList) == 1:
+    #         return op + argumentList[0]
+    #     else:
+    #         opp = (' ' + op + ' ')
+    #         return '(' + opp.join(argumentList) + ')'
 
 
 def factorize(s):
@@ -89,10 +106,10 @@ def terms(x):
 
 
 def build_sentence(expression):
-    def handle_implications_disjunctions(expression):
+    def handle_implications_disjunctions(inner_expression):
         implication = '=>'
-        expression = expression.replace(implication, '|' + repr(implication) + '|')
-        return expression
+        inner_expression = inner_expression.replace(implication, '|' + repr(implication) + '|')
+        return inner_expression
 
     if isinstance(expression, str):
         y = SentencesDictionary(ComplexSentence)
@@ -137,11 +154,11 @@ class SentencesDictionary(collections.defaultdict):
 
 
 def convert_to_cnf(clause):
-    def eliminate_implications_rec(sentence):
+    def __eliminate_implications_rec(sentence):
         sentence = build_sentence(sentence)
         if not sentence.argumentList or is_symbol(sentence.operator):
             return sentence
-        argumentList = list(map(eliminate_implications_rec, sentence.argumentList))
+        argumentList = list(map(__eliminate_implications_rec, sentence.argumentList))
         sentenceOne, sentenceTwo = first(argumentList), argumentList[-1]
         if sentence.operator == '=>':
             return sentenceTwo | ~sentenceOne
@@ -149,45 +166,45 @@ def convert_to_cnf(clause):
             assert sentence.operator in ('&', '|', '~')
             return ComplexSentence(sentence.operator, *argumentList)
 
-    def NOT(b):
-        return move_negation_inwards_rec(~b)
+    def __NOT(b):
+        return __move_negation_inwards_rec(~b)
 
-    def move_negation_inwards_rec(sentence):
+    def __move_negation_inwards_rec(sentence):
         sentence = build_sentence(sentence)
         if sentence.operator == '~':
             partialSentence = first(sentence.argumentList)
             if partialSentence.operator == '~':
-                return move_negation_inwards_rec(first(partialSentence.argumentList))
+                return __move_negation_inwards_rec(first(partialSentence.argumentList))
             if partialSentence.operator == '&':
-                return join_terms('|', list(map(NOT, partialSentence.argumentList)))
+                return join_terms('|', list(map(__NOT, partialSentence.argumentList)))
             if partialSentence.operator == '|':
-                return join_terms('&', list(map(NOT, partialSentence.argumentList)))
+                return join_terms('&', list(map(__NOT, partialSentence.argumentList)))
             return sentence
         elif is_symbol(sentence.operator) or not sentence.argumentList:
             return sentence
         else:
-            return ComplexSentence(sentence.operator, *list(map(move_negation_inwards_rec, sentence.argumentList)))
+            return ComplexSentence(sentence.operator, *list(map(__move_negation_inwards_rec, sentence.argumentList)))
 
-    def distribute_rec(sentence):
+    def __distribute_rec(sentence):
         sentence = build_sentence(sentence)
         if sentence.operator == '|':
             sentence = join_terms('|', sentence.argumentList)
             args_num = len(sentence.argumentList)
             if sentence.operator != '|':
-                return distribute_rec(sentence)
+                return __distribute_rec(sentence)
             if args_num == ZERO:
                 return False
             if args_num == ONE:
-                return distribute_rec(first(sentence.argumentList))
+                return __distribute_rec(first(sentence.argumentList))
             conjuncts = first(arg for arg in sentence.argumentList if arg.operator == '&')
             if not conjuncts:
                 return sentence
             others = [a for a in sentence.argumentList if a is not conjuncts]
             rest = join_terms('|', others)
-            return join_terms('&', [distribute_rec(c | rest)
+            return join_terms('&', [__distribute_rec(c | rest)
                                     for c in conjuncts.argumentList])
         elif sentence.operator == '&':
-            return join_terms('&', list(map(distribute_rec, sentence.argumentList)))
+            return join_terms('&', list(map(__distribute_rec, sentence.argumentList)))
         else:
             return sentence
 
@@ -197,11 +214,11 @@ def convert_to_cnf(clause):
 
     # Eliminate implications
 
-    clause = eliminate_implications_rec(clause)
+    clause = __eliminate_implications_rec(clause)
 
     # Move negation inwards
 
-    clause = move_negation_inwards_rec(clause)
+    clause = __move_negation_inwards_rec(clause)
 
     # Stardardize variables
 
@@ -209,7 +226,7 @@ def convert_to_cnf(clause):
 
     # Distribute disjunctions over conjunctions
 
-    clause = distribute_rec(clause)
+    clause = __distribute_rec(clause)
 
     return clause
 
@@ -367,78 +384,114 @@ class KB:
             for clause in sentences:
                 clause = standardize_variables_rec(clause)
                 clause = convert_to_cnf(clause)
+                clause = factorize(clause)
                 self.tell(clause)
 
     def tell(self, sentence):
         self.clauses.append(sentence)
 
     def ask_if_true(self, query):
-        return resolution(self, query)
+        return self.__binary_resolution(query)
 
+    def __binary_resolution(self, alpha):
+        start_time = timer()
+        frontier = []
+        loop_detector = []
+        frontier.append(convert_to_cnf(~alpha))
+        loop_detector.append(convert_to_cnf(~alpha))
+        while frontier:
+            current_sentence = frontier.pop()
+            for clause in self.clauses:
+                ci = current_sentence
+                cj = clause
+                # print("ci: " + str(ci))
+                # print("cj: " + str(cj))
+                for di in enum_disjunctions(ci):
+                    for dj in enum_disjunctions(cj):
+                        unsigned_di = copy.deepcopy(di)
+                        unsigned_dj = copy.deepcopy(dj)
+                        di_neg = False
+                        dj_neg = False
+                        if di.operator == '~':
+                            unsigned_di = (convert_to_cnf(~di))
+                            di_neg = True
+                        if dj.operator == '~':
+                            unsigned_dj = (convert_to_cnf(~dj))
+                            dj_neg = True
 
-class ComplexSentence:
-    sentenceId = 0
+                        # print("original_di: " + str(di) + " original_dj: " + str(dj))
+                        if unsigned_di.__equalOp__(unsigned_dj) and (di_neg != dj_neg):
+                            phi = unify(di, convert_to_cnf(~dj))
+                            if phi is not None:
+                                new_clause = join_terms('|',
+                                                        unique(remove_all(di, enum_disjunctions(ci))) + remove_all(dj,
+                                                                                                                   enum_disjunctions(
+                                                                                                                       cj)))
+                                resolvent = subst(phi, new_clause)
+                                # print(len(loop_detector))
+                                if resolvent is False:
+                                    return True
+                                resolvent = factorize(resolvent)
+                                if resolvent not in loop_detector:
+                                    # print(resolvent)
+                                    frontier.append(resolvent)
+                                    loop_detector.append(resolvent)
+            elapsed_time = timer()
+            if (elapsed_time - start_time) > MAX_TIME_PER_QUERY:
+                return False
+        return False
 
-    def __init__(self, operator, *arguments):
-        self.operator = str(operator)
-        # print("type:" + str(type(argumentList)))
-        # if len(argumentList) == 1:
-        #     print("type argumentList[0]:" + str(type(argumentList[0])))
-        # if len(argumentList) == 2:
-        #     print("type argumentList[1]:" + str(type(argumentList[1])))
-        self.argumentList = arguments
-
-    def __invert__(self):
-        return ComplexSentence('~', self)
-
-    def __add__(self, rightNode):
-        return ComplexSentence('+', self, rightNode)
-
-    def __and__(self, rightNode):
-        return ComplexSentence('&', self, rightNode)
-
-    def __or__(self, rightNode):
-        class Sentence:
-            def __init__(self, op, leftNode):
-                self.op, self.leftNode = op, leftNode
-
-            def __or__(self, rightInnerNode):
-                return ComplexSentence(self.op, self.leftNode, rightInnerNode)
-
-            # def __repr__(self):
-            #     return "Sentence('{}', {})".format(self.op, self.lhs)
-
-        if isinstance(rightNode, ComplexSentence):
-            return ComplexSentence('|', self, rightNode)
-        else:
-            return Sentence(rightNode, self)
-
-    def __call__(self, *argumentList):
-        if self.argumentList:
-            print("Error element should not contain argumentList")
-        else:
-            return ComplexSentence(self.operator, *argumentList)
-
-    def __eq__(self, other):
-        return isinstance(other,
-                          ComplexSentence) and self.operator == other.operator and self.argumentList == other.argumentList
-
-    def __equalOp__(self, other):
-        return isinstance(other, ComplexSentence) and self.operator == other.operator
-
-    def __hash__(self):
-        return hash(self.operator) % hash(self.argumentList)
-
-    # def __repr__(self):
-    #     op = self.operator
-    #     argumentList = [str(arg) for arg in self.argumentList]
-    #     if op.isidentifier():
-    #         return '{}({})'.format(op, ', '.join(argumentList)) if argumentList else op
-    #     elif len(argumentList) == 1:
-    #         return op + argumentList[0]
-    #     else:
-    #         opp = (' ' + op + ' ')
-    #         return '(' + opp.join(argumentList) + ')'
+    # def __pl_resolve(kb, ci, cj):
+    #     clauses = []
+    #     # print("ci = ", ci)
+    #     # print("cj = ", cj)
+    #     for di in enum_disjunctions(ci):
+    #         for dj in enum_disjunctions(cj):
+    #             unsigned_di = copy.deepcopy(di)
+    #             unsigned_dj = copy.deepcopy(dj)
+    #             di_neg = False
+    #             dj_neg = False
+    #             if di.operator == '~':
+    #                 unsigned_di = (convert_to_cnf(~di))
+    #                 di_neg = True
+    #             if dj.operator == '~':
+    #                 unsigned_dj = (convert_to_cnf(~dj))
+    #                 dj_neg = True
+    #
+    #             # print("original_di: " + str(di) + " original_dj: " + str(dj))
+    #             if unsigned_di.__equalOp__(unsigned_dj) and (di_neg != dj_neg):
+    #                 phi = unify(di, convert_to_cnf(~dj))
+    #                 if phi is not None:
+    #                     new_clause = join_terms('|', unique(remove_all(di, enum_disjunctions(ci))) +
+    #                                             remove_all(dj, enum_disjunctions(cj)))
+    #                     resolvent = subst(phi, new_clause)
+    #                     # print(len(loop_detector))
+    #                     if resolvent is not False:
+    #                         resolvent = factorize(resolvent)
+    #                     clauses.append(resolvent)
+    #     return clauses
+    #
+    # def __pl_resolution(kb, alpha):
+    #     clauses = kb.clauses + enum_conjunctions(convert_to_cnf(~alpha))
+    #     new = set()
+    #     while True:
+    #         n = len(clauses)
+    #         start_time = timer()
+    #         pairs = [(clauses[i], clauses[j])
+    #                  for i in range(n) for j in range(i + 1, n)]
+    #         for (ci, cj) in pairs:
+    #             resolvers = kb.__pl_resolve(ci, cj)
+    #             if False in resolvers:
+    #                 return True
+    #             new = new.union(set(resolvers))
+    #         if new.issubset(set(clauses)):
+    #             return False
+    #         for c in new:
+    #             if c not in clauses:
+    #                 clauses.append(c)
+    #         elapsed_time = timer()
+    #         if (elapsed_time - start_time) > MAX_TIME_PER_QUERY_FULL_RESOLUTION:
+    #             return False
 
 
 standardize_variables_rec.counter = 0

@@ -1,5 +1,5 @@
 1
-Kills(Curiosity,Tuna)
+~Kills(Curiosity,Tuna)
 7
 Animal(v) | Loves(w,x)
 ~Loves(x, v) | Loves(w,x)

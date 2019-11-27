@@ -9,7 +9,7 @@ import enum
 # Global variables
 ZERO = 0
 ONE = 1
-MAX_TIME_PER_QUERY = 40
+MAX_TIME_PER_QUERY = 60
 
 
 class Operator(enum.Enum):
